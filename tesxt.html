@@ -1,0 +1,1918 @@
+<!DOCTYPE html>
+<html lang="ne">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>शुभ विवाह - 3D Royal Nepali Wedding Invitation</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Serif+Devanagari:wght@400;600;700&family=Rozha+One&family=Yatra+One&display=swap" rel="stylesheet">
+
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      margin: 0; padding: 0;
+      width: 100%; height: 100vh; height: 100dvh;
+      overflow: hidden;
+      background: #240106;
+      font-family: 'Inter', 'Noto Serif Devanagari', sans-serif;
+      user-select: none; -webkit-user-select: none;
+    }
+
+    #webgl-container {
+      position: fixed; inset: 0;
+      width: 100%; height: 100vh; height: 100dvh;
+      z-index: 1; touch-action: none; cursor: pointer;
+    }
+    #webgl-container.opened { cursor: grab; }
+    #webgl-container.opened:active { cursor: grabbing; }
+
+    .gold-glass {
+      background: rgba(32, 3, 8, 0.72);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(245, 208, 97, 0.35);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 241, 184, 0.16);
+    }
+    .gold-btn {
+      background: linear-gradient(135deg, rgba(212, 155, 39, 0.28), rgba(135, 88, 16, 0.38));
+      border: 1px solid rgba(245, 208, 97, 0.5);
+      color: #fff1b8;
+      transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .gold-btn:hover {
+      background: linear-gradient(135deg, rgba(245, 208, 97, 0.42), rgba(180, 125, 28, 0.52));
+      border-color: #fff1b8;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(212, 155, 39, 0.28);
+    }
+    .gold-btn:active { transform: translateY(0) scale(0.97); }
+
+    .nepali-font { font-family: 'Noto Serif Devanagari', serif; }
+
+    @keyframes pulseGlow {
+      0%, 100% { transform: translate(-50%, 0) scale(1); box-shadow: 0 10px 30px rgba(0,0,0,.55), 0 0 18px rgba(245,208,97,.22); }
+      50% { transform: translate(-50%, -3px) scale(1.02); box-shadow: 0 14px 36px rgba(0,0,0,.65), 0 0 28px rgba(245,208,97,.42); }
+    }
+    .envelope-prompt { animation: pulseGlow 2.8s ease-in-out infinite; }
+
+    #control-bar {
+      flex-wrap: wrap; justify-content: center;
+      width: max-content; max-width: 98vw;
+      bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+    }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: rgba(24, 2, 6, 0.45); }
+    ::-webkit-scrollbar-thumb { background: rgba(212, 155, 39, 0.45); border-radius: 9999px; }
+  </style>
+</head>
+<body>
+
+  <div id="webgl-container"></div>
+
+  <button
+    id="open-envelope-prompt"
+    type="button"
+    class="envelope-prompt fixed bottom-16 sm:bottom-20 left-1/2 z-20 gold-glass gold-btn rounded-full px-6 py-3 text-xs sm:text-sm font-semibold tracking-wide flex items-center gap-2.5 cursor-pointer transition-opacity duration-500"
+  >
+    <span class="w-2 h-2 rounded-full bg-amber-300 animate-ping"></span>
+    <span class="nepali-font">निमन्त्रणा खोल्न ट्याप गर्नुहोस् • Tap to Open</span>
+  </button>
+
+  <div
+    id="toast-banner"
+    class="fixed top-5 left-1/2 -translate-x-1/2 z-30 gold-glass rounded-full px-4 py-1.5 text-xs text-amber-100 opacity-0 pointer-events-none transition-opacity duration-300 text-center max-w-[92vw] nepali-font"
+  ></div>
+
+  <footer
+    id="control-bar"
+    class="fixed left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 sm:gap-3 px-3 transition-all duration-700 opacity-0 translate-y-4 pointer-events-none"
+  >
+    <button id="replay-envelope-btn" type="button"
+      class="gold-glass gold-btn rounded-full px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-medium flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+      title="Replay Royal Envelope Opening">
+      <svg class="w-4 h-4 text-amber-300 shrink-0" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+      </svg>
+      <span class="nepali-font">खाम (Replay Envelope)</span>
+    </button>
+
+    <button id="gyro-btn" type="button"
+      class="gold-glass gold-btn rounded-full px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-medium flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+      title="Toggle / Recalibrate Mobile Gyroscope">
+      <svg class="w-4 h-4 text-amber-300 shrink-0" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+      </svg>
+      <span id="gyro-btn-label" class="nepali-font">सेन्सर (Gyro)</span>
+    </button>
+
+    <button id="edit-btn" type="button"
+      class="gold-glass gold-btn rounded-full px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-medium flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+      title="Edit Invitation Details">
+      <svg class="w-4 h-4 text-amber-300 shrink-0" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+      </svg>
+      <span class="nepali-font">सम्पादन (Edit Details)</span>
+    </button>
+  </footer>
+
+  <aside
+    id="edit-drawer"
+    class="fixed inset-x-3 bottom-20 sm:inset-auto sm:right-6 sm:bottom-16 sm:w-96 z-30 gold-glass rounded-2xl p-4 sm:p-5 text-amber-100 transition-all duration-300 opacity-0 translate-y-4 pointer-events-none max-h-[70vh] overflow-y-auto"
+    style="user-select:text;-webkit-user-select:text"
+  >
+    <div class="flex items-center justify-between pb-3 mb-3 border-b border-amber-400/25">
+      <div>
+        <h2 class="text-sm sm:text-base font-semibold text-amber-200 nepali-font">निमन्त्रणा विवरण सम्पादन</h2>
+        <p class="text-[11px] text-amber-200/65">Customize Nepali text &amp; couple artwork</p>
+      </div>
+      <button id="close-drawer-btn" type="button" aria-label="Close"
+        class="p-1.5 rounded-full hover:bg-amber-400/20 text-amber-200/80 hover:text-amber-100 cursor-pointer">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <form id="invitation-form" class="space-y-3 text-xs sm:text-sm nepali-font">
+      <div>
+        <label class="block text-amber-200/80 text-xs mb-1">अतिथिको नाम (Guest Name)</label>
+        <input type="text" id="input-guest" placeholder="____________________"
+          class="w-full rounded-xl bg-black/45 border border-amber-400/30 px-3 py-2 text-amber-100 placeholder-amber-200/35 focus:outline-none focus:border-amber-300" />
+      </div>
+
+      <div class="grid grid-cols-2 gap-2.5">
+        <div>
+          <label class="block text-amber-200/80 text-xs mb-1">सुपुत्र (Groom)</label>
+          <input type="text" id="input-groom" placeholder="______________"
+            class="w-full rounded-xl bg-black/45 border border-amber-400/30 px-3 py-2 text-amber-100 placeholder-amber-200/35 focus:outline-none focus:border-amber-300" />
+        </div>
+        <div>
+          <label class="block text-amber-200/80 text-xs mb-1">सुपुत्री (Bride)</label>
+          <input type="text" id="input-bride" placeholder="______________"
+            class="w-full rounded-xl bg-black/45 border border-amber-400/30 px-3 py-2 text-amber-100 placeholder-amber-200/35 focus:outline-none focus:border-amber-300" />
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-amber-200/80 text-xs mb-1">मिति (Nepali Date)</label>
+        <input type="text" id="input-date" value="२०८३ मंसिर १५ गते, सोमबार"
+          class="w-full rounded-xl bg-black/45 border border-amber-400/30 px-3 py-2 text-amber-100 focus:outline-none focus:border-amber-300" />
+      </div>
+
+      <div>
+        <label class="block text-amber-200/80 text-xs mb-1">स्थान (Venue)</label>
+        <input type="text" id="input-venue" value="याक एण्ड यती प्यालेस, काठमाडौं"
+          class="w-full rounded-xl bg-black/45 border border-amber-400/30 px-3 py-2 text-amber-100 focus:outline-none focus:border-amber-300" />
+      </div>
+
+      <div>
+        <label class="block text-amber-200/80 text-xs mb-1">दर्शनाभिलाषी (Host Family)</label>
+        <input type="text" id="input-host" value="शर्मा परिवार"
+          class="w-full rounded-xl bg-black/45 border border-amber-400/30 px-3 py-2 text-amber-100 focus:outline-none focus:border-amber-300" />
+      </div>
+
+      <div class="pt-1 border-t border-amber-400/20">
+        <label class="block text-amber-200/80 text-xs mb-1.5">वर-वधू चित्र परिवर्तन (Custom Couple Image)</label>
+        <div class="flex items-center gap-2">
+          <label class="flex-1 gold-btn rounded-xl px-3 py-2 text-center text-xs cursor-pointer truncate">
+            <span id="upload-label">तस्वीर छान्नुहोस् (Upload PNG/JPG)</span>
+            <input type="file" id="input-couple-img" accept="image/*" class="hidden" />
+          </label>
+          <button type="button" id="clear-couple-img-btn"
+            class="hidden px-2.5 py-2 rounded-xl border border-amber-400/30 text-amber-200/80 hover:text-amber-100 text-xs cursor-pointer"
+            title="Restore Painted Couple">मूल चित्र</button>
+        </div>
+      </div>
+
+      <div class="pt-2 flex items-center justify-between gap-2">
+        <button type="button" id="reset-text-btn"
+          class="px-3 py-2 rounded-xl border border-amber-400/25 text-amber-200/75 hover:text-amber-100 hover:bg-amber-400/10 text-xs cursor-pointer">
+          रिसेट (Reset)
+        </button>
+        <button type="submit" class="gold-btn px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer">
+          अपडेट गर्नुहोस् (Apply)
+        </button>
+      </div>
+    </form>
+  </aside>
+
+  <script>
+    /**
+     * 3D Royal Nepali Wedding Invitation
+     * - Maroon & gold envelope with wax seal, flap hinge, card rising out of the envelope
+     * - 5-plane parallax shadow-box with paper-cut shadows
+     * - Mouse parallax + orientation-aware mobile gyroscope (iOS permission, HTTPS check, recalibration)
+     */
+
+    // ---------- Compatibility: roundRect for older Safari ----------
+    if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.roundRect) {
+      CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+        r = Math.min(r, w / 2, h / 2);
+        this.moveTo(x + r, y);
+        this.arcTo(x + w, y, x + w, y + h, r);
+        this.arcTo(x + w, y + h, x, y + h, r);
+        this.arcTo(x, y + h, x, y, r);
+        this.arcTo(x, y, x + w, y, r);
+        this.closePath();
+      };
+    }
+
+    // =========================================================
+    // 1. CONTENT & STATE
+    // =========================================================
+    const DEFAULT_DATA = {
+      guest: '', groom: '', bride: '',
+      date: '२०८३ मंसिर १५ गते, सोमबार',
+      venue: 'याक एण्ड यती प्यालेस, काठमाडौं',
+      host: 'शर्मा परिवार'
+    };
+
+    let cardData = { ...DEFAULT_DATA };
+    let customCoupleImage = null;
+
+    const state = {
+      mouseNormX: 0, mouseNormY: 0,
+      smoothTiltX: 0, smoothTiltY: 0,
+      gyroActive: false,
+      gyroTiltX: 0, gyroTiltY: 0,
+      envelopeMode: 'closed',   // closed | opening | opened | closing
+      openProgress: 0
+    };
+
+    // =========================================================
+    // 2. CANVAS ARTWORK
+    // =========================================================
+    function createHiResCanvas(w = 2048, h = 2048) {
+      const c = document.createElement('canvas');
+      c.width = Number.isFinite(w) && w > 0 ? Math.round(w) : 2048;
+      c.height = Number.isFinite(h) && h > 0 ? Math.round(h) : 2048;
+      return c;
+    }
+
+    function createGoldGradient(ctx, x1, y1, x2, y2) {
+      const g = ctx.createLinearGradient(
+        Number.isFinite(x1) ? x1 : 0, Number.isFinite(y1) ? y1 : 0,
+        Number.isFinite(x2) ? x2 : 2048, Number.isFinite(y2) ? y2 : 2048
+      );
+      g.addColorStop(0.0, '#c88c1e');
+      g.addColorStop(0.22, '#f5d061');
+      g.addColorStop(0.48, '#fff1b8');
+      g.addColorStop(0.74, '#d49b27');
+      g.addColorStop(1.0, '#aa7214');
+      return g;
+    }
+
+    // Blurred silhouette shadow. Uses canvas shadowBlur (works on Safari/iOS, unlike ctx.filter).
+    function generatePaperCutShadowCanvas(src, blurPx = 22) {
+      const c = createHiResCanvas(src.width, src.height);
+      const ctx = c.getContext('2d');
+      ctx.shadowColor = 'rgba(14, 0, 3, 0.88)';
+      ctx.shadowBlur = blurPx * 1.4;
+      ctx.shadowOffsetX = src.width;
+      ctx.shadowOffsetY = 0;
+      ctx.drawImage(src, -src.width, 0);
+      return c;
+    }
+
+    function paintLoktaBackgroundCanvas(size = 2048) {
+      const W = size, H = size;
+      const k = size / 2048;
+      const canvas = createHiResCanvas(W, H);
+      const ctx = canvas.getContext('2d');
+
+      const baseGrad = ctx.createLinearGradient(0, 0, W, H);
+      baseGrad.addColorStop(0, '#45040d');
+      baseGrad.addColorStop(0.5, '#340209');
+      baseGrad.addColorStop(1, '#240106');
+      ctx.fillStyle = baseGrad;
+      ctx.fillRect(0, 0, W, H);
+
+      const radialGlow = ctx.createRadialGradient(W * 0.52, H * 0.46, 60 * k, W * 0.5, H * 0.5, W * 0.62);
+      radialGlow.addColorStop(0, 'rgba(120, 9, 24, 0.92)');
+      radialGlow.addColorStop(0.55, 'rgba(78, 5, 15, 0.45)');
+      radialGlow.addColorStop(1, 'rgba(36, 1, 6, 0)');
+      ctx.fillStyle = radialGlow;
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.save();
+      for (let i = 0; i < 2000 * k; i++) {
+        const x = Math.random() * W, y = Math.random() * H;
+        const len = (18 + Math.random() * 55) * k;
+        const ang = Math.random() * Math.PI * 2;
+        ctx.strokeStyle = i % 3 === 0 ? 'rgba(255, 215, 165, 0.035)' : 'rgba(18, 0, 3, 0.06)';
+        ctx.lineWidth = (0.8 + Math.random() * 1.4) * k;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.quadraticCurveTo(x + Math.cos(ang + 0.4) * len * 0.5, y + Math.sin(ang + 0.4) * len * 0.5,
+                             x + Math.cos(ang) * len, y + Math.sin(ang) * len);
+        ctx.stroke();
+      }
+      for (let i = 0; i < 12000 * k; i++) {
+        ctx.fillStyle = i % 2 === 0 ? 'rgba(255, 224, 185, 0.024)' : 'rgba(0, 0, 0, 0.04)';
+        ctx.fillRect(Math.random() * W, Math.random() * H, 2 * k, 2 * k);
+      }
+      ctx.restore();
+
+      ctx.save();
+      ctx.translate(W * 0.5, H * 0.52);
+      ctx.scale(k, k);
+      ctx.strokeStyle = 'rgba(245, 208, 97, 0.045)';
+      ctx.lineWidth = 2.5;
+      for (let r = 140; r <= 540; r += 80) {
+        ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
+      }
+      for (let i = 0; i < 24; i++) {
+        ctx.save();
+        ctx.rotate((i * Math.PI * 2) / 24);
+        ctx.beginPath();
+        ctx.moveTo(0, -140);
+        ctx.quadraticCurveTo(56, -340, 0, -520);
+        ctx.quadraticCurveTo(-56, -340, 0, -140);
+        ctx.stroke();
+        ctx.restore();
+      }
+      ctx.restore();
+      return canvas;
+    }
+
+    function paintAmbientGlowCanvas() {
+      const W = 1024, H = 1024;
+      const canvas = createHiResCanvas(W, H);
+      const ctx = canvas.getContext('2d');
+
+      const g1 = ctx.createRadialGradient(W * 0.65, H * 0.42, 15, W * 0.65, H * 0.42, 340);
+      g1.addColorStop(0, 'rgba(245, 208, 97, 0.16)');
+      g1.addColorStop(0.5, 'rgba(212, 155, 39, 0.06)');
+      g1.addColorStop(1, 'rgba(212, 155, 39, 0)');
+      ctx.fillStyle = g1; ctx.fillRect(0, 0, W, H);
+
+      const g2 = ctx.createRadialGradient(W * 0.3, H * 0.72, 10, W * 0.3, H * 0.72, 280);
+      g2.addColorStop(0, 'rgba(255, 214, 130, 0.14)');
+      g2.addColorStop(1, 'rgba(255, 214, 130, 0)');
+      ctx.fillStyle = g2; ctx.fillRect(0, 0, W, H);
+
+      ctx.save();
+      ctx.translate(W * 0.5, H * 0.56);
+      ctx.scale(0.5, 0.5);
+      ctx.fillStyle = 'rgba(245, 208, 97, 0.032)';
+      for (let i = 0; i < 12; i++) {
+        ctx.save();
+        ctx.rotate((i * Math.PI * 2) / 12);
+        ctx.beginPath();
+        ctx.moveTo(0, -60);
+        ctx.bezierCurveTo(110, -240, 90, -450, 0, -560);
+        ctx.bezierCurveTo(-90, -450, -110, -240, 0, -60);
+        ctx.fill();
+        ctx.restore();
+      }
+      ctx.restore();
+      return canvas;
+    }
+
+    function paintLotusClusterCanvas(isTopLeft = true) {
+      const W = 1024, H = 1024;
+      const canvas = createHiResCanvas(W, H);
+      const ctx = canvas.getContext('2d');
+
+      ctx.save();
+      if (!isTopLeft) { ctx.translate(W, H); ctx.scale(-1, -1); }
+
+      const stems = [
+        { x1: 45, y1: 180, cx: 290, cy: 205, x2: 685, y2: 345, w: 10 },
+        { x1: 75, y1: 240, cx: 330, cy: 365, x2: 595, y2: 495, w: 8 },
+        { x1: 185, y1: 95, cx: 410, cy: 95, x2: 585, y2: 155, w: 9 },
+        { x1: 250, y1: 55, cx: 495, cy: 70, x2: 795, y2: 180, w: 8 }
+      ];
+      stems.forEach(s => {
+        const sGrad = ctx.createLinearGradient(s.x1, s.y1, s.x2, s.y2);
+        sGrad.addColorStop(0, '#365c20');
+        sGrad.addColorStop(0.5, '#598c38');
+        sGrad.addColorStop(1, '#76ab4e');
+        ctx.strokeStyle = sGrad;
+        ctx.lineWidth = s.w;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(s.x1, s.y1);
+        ctx.quadraticCurveTo(s.cx, s.cy, s.x2, s.y2);
+        ctx.stroke();
+      });
+
+      function drawLilyPad(cx, cy, rx, ry, rot) {
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(rot);
+        const padGrad = ctx.createRadialGradient(-rx * 0.25, -ry * 0.25, 16, 0, 0, rx * 1.05);
+        padGrad.addColorStop(0, '#85bd57');
+        padGrad.addColorStop(0.45, '#588c34');
+        padGrad.addColorStop(0.85, '#355c1c');
+        padGrad.addColorStop(1, '#223d10');
+        ctx.fillStyle = padGrad;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.ellipse(0, 0, rx, ry, 0, 0.24, Math.PI * 2 - 0.24);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(186, 227, 134, 0.42)';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(195, 232, 148, 0.35)';
+        ctx.lineWidth = 2.4;
+        for (let a = 0.45; a < Math.PI * 2 - 0.45; a += 0.38) {
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.quadraticCurveTo(Math.cos(a + 0.08) * rx * 0.52, Math.sin(a + 0.08) * ry * 0.52,
+                               Math.cos(a) * rx * 0.92, Math.sin(a) * ry * 0.92);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+      drawLilyPad(118, 285, 210, 225, -0.35);
+      drawLilyPad(275, 455, 108, 62, 0.42);
+      drawLilyPad(390, 88, 125, 72, -0.18);
+
+      function drawSeedPod(x, y, r, angle, isGold) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(angle);
+        const cupGrad = ctx.createLinearGradient(-r, 0, r, r);
+        if (isGold) { cupGrad.addColorStop(0, '#f5d061'); cupGrad.addColorStop(1, '#9e6b14'); }
+        else { cupGrad.addColorStop(0, '#78a64b'); cupGrad.addColorStop(1, '#3b5c1e'); }
+        ctx.fillStyle = cupGrad;
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.48, r * 0.95);
+        ctx.lineTo(-r, -r * 0.22);
+        ctx.lineTo(r, -r * 0.22);
+        ctx.lineTo(r * 0.48, r * 0.95);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = isGold ? '#fff1b8' : '#a7cf74';
+        ctx.beginPath();
+        ctx.ellipse(0, -r * 0.22, r, r * 0.44, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#4a300c';
+        for (let i = -2; i <= 2; i++) {
+          ctx.beginPath();
+          ctx.arc(i * (r * 0.34), -r * 0.22, r * 0.11, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+      drawSeedPod(595, 152, 44, 0.45, false);
+      drawSeedPod(800, 185, 32, 0.78, true);
+
+      function drawLotusBud(x, y, scale, angle, isGoldBud) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(angle);
+        ctx.scale(scale, scale);
+        const grad = ctx.createLinearGradient(0, 35, 0, -85);
+        if (isGoldBud) {
+          grad.addColorStop(0, '#b5841d'); grad.addColorStop(0.55, '#f5d061'); grad.addColorStop(1, '#fff6cc');
+        } else {
+          grad.addColorStop(0, '#96153c'); grad.addColorStop(0.5, '#eb5b87'); grad.addColorStop(1, '#ffd4e2');
+        }
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.moveTo(0, 36);
+        ctx.bezierCurveTo(-48, 8, -40, -58, 0, -90);
+        ctx.bezierCurveTo(40, -58, 48, 8, 0, 36);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255, 245, 248, 0.45)';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(0, 26); ctx.lineTo(0, -82); ctx.stroke();
+        ctx.fillStyle = '#48752b';
+        ctx.beginPath();
+        ctx.moveTo(-22, 30);
+        ctx.quadraticCurveTo(0, 8, 22, 30);
+        ctx.lineTo(0, 44);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+      drawLotusBud(705, 345, 1.15, 1.25, false);
+      drawLotusBud(595, 495, 0.76, 1.48, true);
+      drawLotusBud(250, 45, 0.74, 0.38, false);
+
+      function drawFullBloomLotus(cx, cy, scale, rot) {
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(rot);
+        ctx.scale(scale, scale);
+
+        const paintPetal = (angle, len, wid, cBase, cMid, cTip) => {
+          ctx.save();
+          ctx.rotate(angle);
+          const pGrad = ctx.createLinearGradient(0, 0, 0, -len);
+          pGrad.addColorStop(0.0, cBase);
+          pGrad.addColorStop(0.52, cMid);
+          pGrad.addColorStop(1.0, cTip);
+          ctx.fillStyle = pGrad;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.bezierCurveTo(-wid, -len * 0.34, -wid * 0.88, -len * 0.82, 0, -len);
+          ctx.bezierCurveTo(wid * 0.88, -len * 0.82, wid, -len * 0.34, 0, 0);
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(130, 14, 48, 0.32)';
+          ctx.lineWidth = 2.2;
+          ctx.stroke();
+          ctx.strokeStyle = 'rgba(255, 240, 246, 0.38)';
+          ctx.lineWidth = 1.6;
+          ctx.beginPath(); ctx.moveTo(0, -12); ctx.lineTo(0, -len * 0.88); ctx.stroke();
+          ctx.restore();
+        };
+
+        [-1.38, -0.92, -0.46, 0, 0.46, 0.92, 1.38, 2.25, -2.25, 3.14].forEach(a =>
+          paintPetal(a, 225, 65, '#8a1236', '#db4471', '#ffc2d4'));
+        [-1.06, -0.56, -0.19, 0.19, 0.56, 1.06, 1.85, -1.85].forEach(a =>
+          paintPetal(a, 188, 56, '#a81b46', '#f2638f', '#ffe0ea'));
+
+        const stamenGrad = ctx.createRadialGradient(0, -24, 6, 0, -18, 44);
+        stamenGrad.addColorStop(0, '#fff1b8');
+        stamenGrad.addColorStop(0.6, '#f5c842');
+        stamenGrad.addColorStop(1, '#c48312');
+        ctx.fillStyle = stamenGrad;
+        ctx.beginPath(); ctx.arc(0, -18, 42, 0, Math.PI * 2); ctx.fill();
+
+        ctx.fillStyle = '#995c08';
+        for (let i = 0; i < 18; i++) {
+          const sa = (i * Math.PI * 2) / 18;
+          ctx.beginPath();
+          ctx.arc(Math.cos(sa) * 28, -18 + Math.sin(sa) * 28, 4.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        paintPetal(-0.44, 144, 50, '#b5214e', '#f779a1', '#fff0f5');
+        paintPetal(0.44, 144, 50, '#b5214e', '#f779a1', '#fff0f5');
+        paintPetal(0, 128, 46, '#c72a59', '#ff91b4', '#fff7fa');
+        ctx.restore();
+      }
+      drawFullBloomLotus(405, 275, 1.05, 0.34);
+
+      ctx.restore();
+      return canvas;
+    }
+
+    function paintNepaliCoupleCanvas(uploadedImg = null) {
+      const W = 1400, H = 1600;
+      const canvas = createHiResCanvas(W, H);
+      const ctx = canvas.getContext('2d');
+
+      if (uploadedImg) {
+        ctx.save();
+        const pad = 70;
+        const boxW = W - pad * 2, boxH = H - pad * 2;
+        ctx.beginPath();
+        ctx.roundRect(pad, pad, boxW, boxH, 90);
+        ctx.clip();
+
+        const imgAspect = uploadedImg.width / uploadedImg.height;
+        const boxAspect = boxW / boxH;
+        let drawW = boxW, drawH = boxH, offX = pad, offY = pad;
+        if (imgAspect > boxAspect) {
+          drawW = boxH * imgAspect;
+          offX = pad - (drawW - boxW) * 0.5;
+        } else {
+          drawH = boxW / imgAspect;
+          offY = pad - (drawH - boxH) * 0.5;
+        }
+        ctx.drawImage(uploadedImg, offX, offY, drawW, drawH);
+
+        const vig = ctx.createRadialGradient(W * 0.5, H * 0.5, boxW * 0.32, W * 0.5, H * 0.5, boxH * 0.62);
+        vig.addColorStop(0, 'rgba(36, 1, 6, 0)');
+        vig.addColorStop(1, 'rgba(36, 1, 6, 0.55)');
+        ctx.fillStyle = vig;
+        ctx.fillRect(pad, pad, boxW, boxH);
+        ctx.restore();
+
+        ctx.save();
+        ctx.strokeStyle = createGoldGradient(ctx, pad, pad, W - pad, H - pad);
+        ctx.lineWidth = 10;
+        ctx.beginPath();
+        ctx.roundRect(pad + 6, pad + 6, boxW - 12, boxH - 12, 84);
+        ctx.stroke();
+        ctx.restore();
+        return canvas;
+      }
+
+      ctx.save();
+      ctx.translate(W * 0.52, H - 18);
+      ctx.scale(2.65, 2.65);
+
+      // ---------- GROOM ----------
+      ctx.save();
+      ctx.translate(-95, 0);
+
+      const coatGrad = ctx.createLinearGradient(-88, -430, 88, 0);
+      coatGrad.addColorStop(0, '#fcf2e1');
+      coatGrad.addColorStop(0.45, '#f0d8b6');
+      coatGrad.addColorStop(0.85, '#d9b586');
+      coatGrad.addColorStop(1, '#bd9360');
+      ctx.fillStyle = coatGrad;
+      ctx.beginPath();
+      ctx.moveTo(-80, 0);
+      ctx.lineTo(-74, -315);
+      ctx.quadraticCurveTo(-56, -370, -22, -385);
+      ctx.lineTo(22, -385);
+      ctx.quadraticCurveTo(56, -370, 74, -315);
+      ctx.lineTo(84, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#8c6638';
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(138, 99, 54, 0.28)';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(-38, -220); ctx.quadraticCurveTo(-44, -110, -48, 0);
+      ctx.moveTo(42, -220); ctx.quadraticCurveTo(48, -110, 52, 0);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#e5b243';
+      ctx.lineWidth = 3.8;
+      ctx.beginPath();
+      ctx.moveTo(-20, -375);
+      ctx.quadraticCurveTo(12, -278, -4, -212);
+      ctx.quadraticCurveTo(-24, -278, 18, -375);
+      ctx.stroke();
+
+      const patukaGrad = ctx.createLinearGradient(-64, -212, 64, -168);
+      patukaGrad.addColorStop(0, '#a31220');
+      patukaGrad.addColorStop(0.5, '#780914');
+      patukaGrad.addColorStop(1, '#54040c');
+      ctx.fillStyle = patukaGrad;
+      ctx.fillRect(-64, -212, 128, 44);
+      ctx.strokeStyle = '#f5d061';
+      ctx.lineWidth = 2.6;
+      ctx.strokeRect(-64, -208, 128, 36);
+
+      const shawlGrad = ctx.createLinearGradient(-78, -380, 38, 0);
+      shawlGrad.addColorStop(0, '#c41627');
+      shawlGrad.addColorStop(0.5, '#910c19');
+      shawlGrad.addColorStop(1, '#5e050e');
+      ctx.fillStyle = shawlGrad;
+      ctx.beginPath();
+      ctx.moveTo(-64, -366);
+      ctx.lineTo(-14, -380);
+      ctx.lineTo(44, -165);
+      ctx.lineTo(36, 0);
+      ctx.lineTo(-44, 0);
+      ctx.lineTo(-78, -222);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#f5d061';
+      ctx.lineWidth = 4.2;
+      ctx.stroke();
+
+      ctx.fillStyle = '#fff1b8';
+      for (let sy = -335; sy < -15; sy += 34) {
+        const sx = -30 + (sy + 335) * 0.14;
+        ctx.beginPath();
+        ctx.moveTo(sx, sy - 5); ctx.lineTo(sx + 5, sy); ctx.lineTo(sx, sy + 5); ctx.lineTo(sx - 5, sy);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      ctx.fillStyle = '#f5e2c6';
+      ctx.beginPath();
+      ctx.moveTo(-70, -338);
+      ctx.quadraticCurveTo(-105, -230, -84, -170);
+      ctx.lineTo(-22, -124);
+      ctx.lineTo(-12, -148);
+      ctx.lineTo(-56, -185);
+      ctx.quadraticCurveTo(-68, -242, -46, -312);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#9e7849';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = '#f0c4a1';
+      ctx.beginPath();
+      ctx.ellipse(-10, -132, 16, 11, 0.25, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#e8b690';
+      ctx.fillRect(-14, -408, 28, 30);
+
+      ctx.save();
+      ctx.translate(4, -435);
+      ctx.rotate(0.15);
+
+      ctx.fillStyle = '#f7cba8';
+      ctx.beginPath();
+      ctx.moveTo(-26, -24);
+      ctx.quadraticCurveTo(-30, 14, -8, 34);
+      ctx.quadraticCurveTo(14, 42, 26, 22);
+      ctx.quadraticCurveTo(32, 0, 26, -24);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = '#1c110f';
+      ctx.beginPath();
+      ctx.moveTo(-28, -12);
+      ctx.quadraticCurveTo(-32, -36, 0, -38);
+      ctx.quadraticCurveTo(28, -36, 26, -16);
+      ctx.lineTo(14, -18);
+      ctx.quadraticCurveTo(-12, -22, -18, 6);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = '#381d15';
+      ctx.lineWidth = 2.1;
+      ctx.beginPath(); ctx.arc(12, -4, 5, 0.1, Math.PI - 0.1); ctx.stroke();
+      ctx.beginPath(); ctx.arc(14, 16, 6.2, 0.2, Math.PI * 0.85); ctx.stroke();
+
+      ctx.save();
+      ctx.translate(-2, -32);
+      ctx.rotate(-0.12);
+      const topiGrad = ctx.createLinearGradient(-32, -38, 32, 8);
+      topiGrad.addColorStop(0, '#bd1929');
+      topiGrad.addColorStop(0.5, '#e03647');
+      topiGrad.addColorStop(1, '#8c0e1b');
+      ctx.fillStyle = topiGrad;
+      ctx.beginPath();
+      ctx.moveTo(-30, 8);
+      ctx.lineTo(-28, -35);
+      ctx.quadraticCurveTo(0, -42, 30, -31);
+      ctx.lineTo(28, 10);
+      ctx.quadraticCurveTo(0, 4, -30, 8);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = '#fff5d6';
+      ctx.lineWidth = 1.9;
+      for (let tx = -22; tx <= 22; tx += 11) {
+        ctx.beginPath();
+        ctx.moveTo(tx, -31); ctx.lineTo(tx + 5, -18); ctx.lineTo(tx, -6); ctx.lineTo(tx + 5, 5);
+        ctx.stroke();
+      }
+      ctx.restore();
+      ctx.restore();
+      ctx.restore();
+
+      // ---------- BRIDE ----------
+      ctx.save();
+      ctx.translate(44, 0);
+
+      const sariGrad = ctx.createLinearGradient(-76, -315, 98, 0);
+      sariGrad.addColorStop(0, '#d1172a');
+      sariGrad.addColorStop(0.48, '#a10b1a');
+      sariGrad.addColorStop(1, '#66040e');
+      ctx.fillStyle = sariGrad;
+      ctx.beginPath();
+      ctx.moveTo(-74, 0);
+      ctx.quadraticCurveTo(-70, -168, -46, -298);
+      ctx.quadraticCurveTo(-20, -328, 24, -318);
+      ctx.quadraticCurveTo(60, -288, 98, 0);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = '#f5d061';
+      ctx.lineWidth = 4.5;
+      ctx.beginPath(); ctx.moveTo(-42, -295); ctx.quadraticCurveTo(10, -212, 70, 0); ctx.stroke();
+      ctx.lineWidth = 2.6;
+      ctx.beginPath(); ctx.moveTo(-31, -299); ctx.quadraticCurveTo(23, -214, 83, 0); ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(72, 2, 10, 0.45)';
+      ctx.lineWidth = 2;
+      for (let px = -36; px <= 12; px += 12) {
+        ctx.beginPath(); ctx.moveTo(px, -140); ctx.lineTo(px - 6, 0); ctx.stroke();
+      }
+
+      ctx.fillStyle = '#fff1b8';
+      for (let by = -255; by < -18; by += 34) {
+        for (let bx = -46; bx < 58; bx += 32) {
+          if (bx < (by + 325) * 0.28) {
+            ctx.beginPath(); ctx.arc(bx, by, 2.8, 0, Math.PI * 2); ctx.fill();
+          }
+        }
+      }
+
+      ctx.strokeStyle = '#f5d061';
+      ctx.lineWidth = 3.8;
+      ctx.beginPath(); ctx.arc(-8, -307, 22, 0.15, Math.PI - 0.15); ctx.stroke();
+      ctx.beginPath(); ctx.arc(-8, -304, 31, 0.2, Math.PI - 0.2); ctx.stroke();
+
+      ctx.fillStyle = '#f4c3a0';
+      ctx.beginPath();
+      ctx.moveTo(-46, -282);
+      ctx.quadraticCurveTo(-65, -206, -24, -148);
+      ctx.lineTo(-10, -158);
+      ctx.quadraticCurveTo(-40, -206, -28, -270);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = '#e0192d';
+      ctx.lineWidth = 5.5;
+      ctx.beginPath(); ctx.moveTo(-37, -166); ctx.lineTo(-22, -177); ctx.stroke();
+      ctx.strokeStyle = '#f5d061';
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
+
+      ctx.fillStyle = '#f4c3a0';
+      ctx.beginPath();
+      ctx.ellipse(-14, -148, 18, 12, -0.15, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#e8b690';
+      ctx.fillRect(-18, -338, 22, 26);
+
+      ctx.save();
+      ctx.translate(-8, -363);
+      ctx.rotate(-0.14);
+
+      ctx.fillStyle = '#170d0b';
+      ctx.beginPath(); ctx.arc(24, 4, 23, 0, Math.PI * 2); ctx.fill();
+
+      ctx.fillStyle = '#fffdf7';
+      for (let fa = -1.25; fa <= 1.45; fa += 0.42) {
+        ctx.beginPath();
+        ctx.arc(16 + Math.cos(fa) * 19, 2 + Math.sin(fa) * 21, 6.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = '#d91932';
+      ctx.beginPath(); ctx.arc(27, 6, 8.5, 0, Math.PI * 2); ctx.fill();
+
+      ctx.fillStyle = '#f8cdb2';
+      ctx.beginPath();
+      ctx.moveTo(-22, -18);
+      ctx.quadraticCurveTo(-26, 12, -6, 28);
+      ctx.quadraticCurveTo(14, 28, 20, 6);
+      ctx.quadraticCurveTo(22, -16, 0, -24);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = '#170d0b';
+      ctx.beginPath();
+      ctx.moveTo(-22, -12);
+      ctx.quadraticCurveTo(-18, -32, 8, -30);
+      ctx.quadraticCurveTo(24, -22, 20, 4);
+      ctx.quadraticCurveTo(6, -14, -22, -12);
+      ctx.fill();
+
+      ctx.strokeStyle = '#f5d061';
+      ctx.lineWidth = 2.4;
+      ctx.beginPath(); ctx.moveTo(-20, -14); ctx.quadraticCurveTo(-4, -22, 14, -12); ctx.stroke();
+
+      ctx.fillStyle = '#d91428';
+      ctx.beginPath(); ctx.arc(-8, -8, 3.4, 0, Math.PI * 2); ctx.fill();
+
+      ctx.strokeStyle = '#381d15';
+      ctx.lineWidth = 1.9;
+      ctx.beginPath(); ctx.arc(-13, 1, 4.6, 0.15, Math.PI - 0.15); ctx.stroke();
+      ctx.beginPath(); ctx.arc(-10, 16, 5.2, 0.2, Math.PI * 0.85); ctx.stroke();
+
+      ctx.fillStyle = '#f5d061';
+      ctx.beginPath(); ctx.arc(6, 12, 4.8, 0, Math.PI * 2); ctx.fill();
+
+      ctx.restore();
+      ctx.restore();
+      ctx.restore();
+
+      return canvas;
+    }
+
+    function paintGoldTypographyCanvases() {
+      const W = 2048, H = 2048;
+      const colorCanvas = createHiResCanvas(W, H);
+      const foilCanvas = createHiResCanvas(W, H);
+      const cCtx = colorCanvas.getContext('2d');
+      const fCtx = foilCanvas.getContext('2d');
+      const cx = W * 0.5;
+
+      const drawGanesha = (ctx, style) => {
+        ctx.save();
+        ctx.translate(cx, 175);
+        ctx.scale(1.65, 1.65);
+        ctx.fillStyle = style;
+        ctx.strokeStyle = style;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        ctx.beginPath();
+        ctx.moveTo(-16, -24); ctx.lineTo(0, -46); ctx.lineTo(16, -24);
+        ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.arc(0, -49, 3.8, 0, Math.PI * 2); ctx.fill();
+
+        ctx.lineWidth = 2.6;
+        ctx.beginPath(); ctx.moveTo(-14, -18); ctx.quadraticCurveTo(0, -24, 14, -18); ctx.stroke();
+
+        ctx.lineWidth = 3.6;
+        ctx.beginPath(); ctx.moveTo(-14, -14); ctx.bezierCurveTo(-36, -22, -38, 12, -16, 10); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(14, -14); ctx.bezierCurveTo(36, -22, 38, 12, 16, 10); ctx.stroke();
+
+        ctx.lineWidth = 5.2;
+        ctx.beginPath();
+        ctx.moveTo(0, -12);
+        ctx.bezierCurveTo(2, 6, -4, 24, -18, 22);
+        ctx.quadraticCurveTo(-26, 20, -24, 12);
+        ctx.stroke();
+
+        ctx.lineWidth = 3.2;
+        ctx.beginPath(); ctx.moveTo(-26, 31); ctx.quadraticCurveTo(0, 40, 26, 31); ctx.stroke();
+        ctx.restore();
+      };
+      drawGanesha(cCtx, createGoldGradient(cCtx, cx - 90, 95, cx + 90, 240));
+      drawGanesha(fCtx, '#ffffff');
+
+      const drawFoilLine = (text, y, font, maxW = 1860) => {
+        cCtx.save();
+        cCtx.font = font;
+        cCtx.textAlign = 'center';
+        cCtx.textBaseline = 'middle';
+        cCtx.lineWidth = 5;
+        cCtx.lineJoin = 'round';
+        cCtx.strokeStyle = 'rgba(20, 1, 4, 0.65)';
+        cCtx.strokeText(text, cx, y, maxW);
+        cCtx.fillStyle = createGoldGradient(cCtx, cx - 640, y - 55, cx + 640, y + 55);
+        cCtx.fillText(text, cx, y, maxW);
+        cCtx.restore();
+
+        fCtx.save();
+        fCtx.font = font;
+        fCtx.textAlign = 'center';
+        fCtx.textBaseline = 'middle';
+        fCtx.fillStyle = '#ffffff';
+        fCtx.fillText(text, cx, y, maxW);
+        fCtx.restore();
+      };
+
+      drawFoilLine('शुभ विवाह', 395, '400 210px "Rozha One", "Yatra One", "Noto Serif Devanagari", serif', 1800);
+
+      const guestVal = cardData.guest.trim() || '____________________';
+      drawFoilLine(`श्रीमान् / श्रीमती ${guestVal}`, 650, '600 68px "Noto Serif Devanagari", serif');
+
+      const groomVal = cardData.groom.trim() || '______________';
+      const brideVal = cardData.bride.trim() || '______________';
+      [
+        `हाम्रा आदरणीय सुपुत्र ${groomVal}`,
+        `र सुपुत्री ${brideVal} को`,
+        `शुभ-विवाहको पावन अवसरमा यहाँको`,
+        `गरिमामय उपस्थितिको लागि`,
+        `हार्दिक निमन्त्रणा गर्दछौं।`
+      ].forEach((line, idx) => {
+        drawFoilLine(line, 825 + idx * 96, '600 64px "Noto Serif Devanagari", serif', 1880);
+      });
+
+      drawFoilLine(`मिति: ${cardData.date.trim() || DEFAULT_DATA.date}`, 1440, '700 66px "Noto Serif Devanagari", serif');
+      drawFoilLine(`स्थान: ${cardData.venue.trim() || DEFAULT_DATA.venue}`, 1545, '700 66px "Noto Serif Devanagari", serif');
+      drawFoilLine(`दर्शनाभिलाषी: ${cardData.host.trim() || DEFAULT_DATA.host}`, 1825, '700 68px "Noto Serif Devanagari", serif');
+
+      return { colorCanvas, foilCanvas };
+    }
+
+    function paintGoldBorderCanvas(aspect = 1.5) {
+      const safeAspect = (Number.isFinite(aspect) && aspect > 0.1) ? Math.min(4.0, Math.max(0.25, aspect)) : 1.5;
+      const W = 2048;
+      const H = Math.max(1024, Math.min(4096, Math.round(W / safeAspect)));
+      const canvas = createHiResCanvas(W, H);
+      const ctx = canvas.getContext('2d');
+
+      const pad = 42;
+      ctx.strokeStyle = createGoldGradient(ctx, 0, 0, W, H);
+      ctx.lineWidth = 7;
+      ctx.strokeRect(pad, pad, W - pad * 2, H - pad * 2);
+
+      const cornerLen = 64, innerPad = pad + 18;
+      ctx.lineWidth = 3.5;
+      ctx.strokeStyle = 'rgba(255, 241, 184, 0.72)';
+      ctx.beginPath();
+      ctx.moveTo(W - innerPad - cornerLen, innerPad);
+      ctx.lineTo(W - innerPad, innerPad);
+      ctx.lineTo(W - innerPad, innerPad + cornerLen);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(innerPad, H - innerPad - cornerLen);
+      ctx.lineTo(innerPad, H - innerPad);
+      ctx.lineTo(innerPad + cornerLen, H - innerPad);
+      ctx.stroke();
+      return canvas;
+    }
+
+    function paintWaxSealCanvases() {
+      const S = 1024;
+      const colorCanvas = createHiResCanvas(S, S);
+      const bumpCanvas = createHiResCanvas(S, S);
+      const cCtx = colorCanvas.getContext('2d');
+      const bCtx = bumpCanvas.getContext('2d');
+      const cx = S * 0.5, cy = S * 0.5;
+
+      bCtx.fillStyle = '#000000';
+      bCtx.fillRect(0, 0, S, S);
+
+      const drawWaxDisc = (ctx, fillStyle, radius) => {
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.fillStyle = fillStyle;
+        ctx.beginPath();
+        for (let i = 0; i <= 360; i++) {
+          const rad = (i * Math.PI) / 180;
+          const r = radius + Math.sin(rad * 28) * 8 + Math.cos(rad * 7) * 5;
+          if (i === 0) ctx.moveTo(Math.cos(rad) * r, Math.sin(rad) * r);
+          else ctx.lineTo(Math.cos(rad) * r, Math.sin(rad) * r);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      };
+
+      drawWaxDisc(cCtx, createGoldGradient(cCtx, 120, 120, 900, 900), 440);
+      drawWaxDisc(bCtx, '#b5b5b5', 440);
+
+      cCtx.save();
+      cCtx.beginPath(); cCtx.arc(cx, cy, 355, 0, Math.PI * 2);
+      cCtx.fillStyle = '#b87d19'; cCtx.fill();
+      cCtx.lineWidth = 14; cCtx.strokeStyle = '#fff1b8'; cCtx.stroke();
+      cCtx.restore();
+
+      bCtx.save();
+      bCtx.beginPath(); bCtx.arc(cx, cy, 355, 0, Math.PI * 2);
+      bCtx.fillStyle = '#555555'; bCtx.fill();
+      bCtx.lineWidth = 16; bCtx.strokeStyle = '#ffffff'; bCtx.stroke();
+      bCtx.restore();
+
+      const drawStampEmblem = (ctx, style) => {
+        ctx.save();
+        ctx.translate(cx, cy - 35);
+        ctx.strokeStyle = style;
+        ctx.fillStyle = style;
+        ctx.lineCap = 'round';
+
+        [-0.85, -0.42, 0, 0.42, 0.85].forEach((ang, idx) => {
+          ctx.save();
+          ctx.rotate(ang);
+          const len = idx === 2 ? 155 : idx === 1 || idx === 3 ? 135 : 110;
+          const wid = idx === 2 ? 42 : 34;
+          ctx.lineWidth = 10;
+          ctx.beginPath();
+          ctx.moveTo(0, 65);
+          ctx.bezierCurveTo(-wid, 15, -wid * 0.85, 65 - len * 0.75, 0, 65 - len);
+          ctx.bezierCurveTo(wid * 0.85, 65 - len * 0.75, wid, 15, 0, 65);
+          ctx.stroke();
+          ctx.restore();
+        });
+
+        ctx.lineWidth = 11;
+        ctx.beginPath(); ctx.arc(0, 82, 85, 0.15, Math.PI - 0.15); ctx.stroke();
+
+        ctx.font = '400 76px "Rozha One", "Noto Serif Devanagari", serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('शुभ विवाह', 0, 175);
+        ctx.restore();
+      };
+      drawStampEmblem(cCtx, '#fff1b8');
+      drawStampEmblem(bCtx, '#ffffff');
+
+      return { colorCanvas, bumpCanvas };
+    }
+
+    // =========================================================
+    // 3. THREE.JS SCENE
+    // =========================================================
+    let scene, camera, renderer;
+    let shadowBoxGroup;
+    let plane0Bg, plane1Glow, plane2Couple, plane2Shadow, plane3Text, plane3Shadow;
+    let plane4Group, lotusTLMesh, lotusTLShadow, lotusBRMesh, lotusBRShadow, borderFrameMesh;
+    let typographyMat, keyLight, rimLight, dustParticles;
+    let cardMats = [];
+    let lastBorderAspect = 0;
+
+    let envelopeGroup, envFlapPivot, waxSealMesh, sealBurstParticles;
+    const sealBurstVelocities = [];
+
+    const Z_PLANES = {
+      bg: -1.60, glow: -0.95,
+      coupleShadow: -0.43, couple: -0.35,
+      textShadow: 0.08, text: 0.15,
+      fgShadow: 0.57, fg: 0.65
+    };
+
+    function getSafeViewportSize() {
+      const w = Math.max(1, window.innerWidth || document.documentElement.clientWidth || 1024);
+      const h = Math.max(1, window.innerHeight || document.documentElement.clientHeight || 768);
+      return { width: w, height: h, aspect: w / h };
+    }
+
+    function getFrustumSizeAtZ(z) {
+      const camZ = camera ? camera.position.z : 6.4;
+      const fov = camera ? camera.fov : 40;
+      const aspect = (camera && Number.isFinite(camera.aspect) && camera.aspect > 0) ? camera.aspect : getSafeViewportSize().aspect;
+      const distance = Math.max(0.1, camZ - z);
+      const height = 2 * Math.tan(THREE.MathUtils.degToRad(fov) * 0.5) * distance;
+      return { width: height * aspect, height };
+    }
+
+    function buildEnvironmentMap() {
+      // Without an environment map, metallic gold renders dark. Build a tiny warm "studio".
+      const pmrem = new THREE.PMREMGenerator(renderer);
+      const envScene = new THREE.Scene();
+      envScene.background = new THREE.Color(0x3a1a10);
+      [[0xfff1c8, 6, -4, 5], [0xffd27a, -6, 3, 4], [0xffffff, 0, 6, -3]].forEach(([c, x, y, z]) => {
+        const m = new THREE.Mesh(
+          new THREE.PlaneGeometry(8, 5),
+          new THREE.MeshBasicMaterial({ color: new THREE.Color(c).multiplyScalar(3), side: THREE.DoubleSide })
+        );
+        m.position.set(x, y, z);
+        m.lookAt(0, 0, 0);
+        envScene.add(m);
+      });
+      scene.environment = pmrem.fromScene(envScene, 0.04).texture;
+      pmrem.dispose();
+    }
+
+    function initScene() {
+      const container = document.getElementById('webgl-container');
+      const vp = getSafeViewportSize();
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x240106);
+
+      camera = new THREE.PerspectiveCamera(40, vp.aspect, 0.1, 100);
+      camera.position.set(0, 0, 6.4);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+      renderer.setSize(vp.width, vp.height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.outputEncoding = THREE.sRGBEncoding;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.12;
+
+      container.innerHTML = '';
+      container.appendChild(renderer.domElement);
+
+      buildEnvironmentMap();
+
+      scene.add(new THREE.AmbientLight(0xfff1dc, 0.95));
+
+      keyLight = new THREE.PointLight(0xffe699, 2.2, 22);
+      keyLight.position.set(1.4, 1.8, 5.2);
+      scene.add(keyLight);
+
+      rimLight = new THREE.DirectionalLight(0xffcf70, 0.85);
+      rimLight.position.set(-2.5, 3.0, 4.5);
+      scene.add(rimLight);
+
+      shadowBoxGroup = new THREE.Group();
+      scene.add(shadowBoxGroup);
+
+      const maxAniso = renderer.capabilities.getMaxAnisotropy();
+      const makeTex = (canvas, srgb = true) => {
+        const t = new THREE.CanvasTexture(canvas);
+        if (srgb) t.encoding = THREE.sRGBEncoding;
+        t.anisotropy = maxAniso;
+        return t;
+      };
+      const plane = () => new THREE.PlaneGeometry(1, 1);
+
+      // Plane 0: background
+      plane0Bg = new THREE.Mesh(plane(),
+        new THREE.MeshStandardMaterial({ map: makeTex(paintLoktaBackgroundCanvas(1536)), roughness: 0.88, metalness: 0.06 }));
+      plane0Bg.position.set(0, 0, Z_PLANES.bg);
+      plane0Bg.renderOrder = 1;
+      shadowBoxGroup.add(plane0Bg);
+
+      // Plane 1: glow
+      plane1Glow = new THREE.Mesh(plane(),
+        new THREE.MeshBasicMaterial({ map: makeTex(paintAmbientGlowCanvas()), transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending }));
+      plane1Glow.position.set(0, 0, Z_PLANES.glow);
+      plane1Glow.renderOrder = 2;
+      shadowBoxGroup.add(plane1Glow);
+
+      // Plane 2: couple
+      const coupleCanvas = paintNepaliCoupleCanvas(customCoupleImage);
+      plane2Shadow = new THREE.Mesh(plane(),
+        new THREE.MeshBasicMaterial({ map: makeTex(generatePaperCutShadowCanvas(coupleCanvas, 26), false), transparent: true, opacity: 0.48, depthWrite: false }));
+      plane2Shadow.position.set(0, 0, Z_PLANES.coupleShadow);
+      plane2Shadow.renderOrder = 3;
+      shadowBoxGroup.add(plane2Shadow);
+
+      plane2Couple = new THREE.Mesh(plane(),
+        new THREE.MeshStandardMaterial({ map: makeTex(coupleCanvas), transparent: true, alphaTest: 0.02, roughness: 0.65, metalness: 0.08, depthWrite: false }));
+      plane2Couple.position.set(0, 0, Z_PLANES.couple);
+      plane2Couple.renderOrder = 4;
+      shadowBoxGroup.add(plane2Couple);
+
+      // Plane 3: typography
+      const { colorCanvas, foilCanvas } = paintGoldTypographyCanvases();
+      plane3Shadow = new THREE.Mesh(plane(),
+        new THREE.MeshBasicMaterial({ map: makeTex(generatePaperCutShadowCanvas(foilCanvas, 18), false), transparent: true, opacity: 0.52, depthWrite: false }));
+      plane3Shadow.position.set(0, 0, Z_PLANES.textShadow);
+      plane3Shadow.renderOrder = 5;
+      shadowBoxGroup.add(plane3Shadow);
+
+      const foilTex = makeTex(foilCanvas, false);
+      typographyMat = new THREE.MeshStandardMaterial({
+        map: makeTex(colorCanvas),
+        metalnessMap: foilTex, roughnessMap: foilTex, bumpMap: foilTex,
+        bumpScale: 0.018, metalness: 0.85, roughness: 0.25,
+        transparent: true, depthWrite: false
+      });
+      plane3Text = new THREE.Mesh(plane(), typographyMat);
+      plane3Text.position.set(0, 0, Z_PLANES.text);
+      plane3Text.renderOrder = 6;
+      shadowBoxGroup.add(plane3Text);
+
+      // Plane 4: lotuses + border
+      plane4Group = new THREE.Group();
+      shadowBoxGroup.add(plane4Group);
+
+      const addLotus = (isTL) => {
+        const canvas = paintLotusClusterCanvas(isTL);
+        const shadow = new THREE.Mesh(plane(),
+          new THREE.MeshBasicMaterial({ map: makeTex(generatePaperCutShadowCanvas(canvas, 24), false), transparent: true, opacity: 0.52, depthWrite: false }));
+        shadow.position.z = Z_PLANES.fgShadow;
+        shadow.renderOrder = 7;
+        plane4Group.add(shadow);
+        const mesh = new THREE.Mesh(plane(),
+          new THREE.MeshStandardMaterial({ map: makeTex(canvas), transparent: true, roughness: 0.62, metalness: 0.06, depthWrite: false }));
+        mesh.position.z = Z_PLANES.fg;
+        mesh.renderOrder = 8;
+        plane4Group.add(mesh);
+        return { shadow, mesh };
+      };
+      ({ shadow: lotusTLShadow, mesh: lotusTLMesh } = addLotus(true));
+      ({ shadow: lotusBRShadow, mesh: lotusBRMesh } = addLotus(false));
+
+      borderFrameMesh = new THREE.Mesh(plane(),
+        new THREE.MeshStandardMaterial({
+          map: makeTex(paintGoldBorderCanvas(vp.aspect)),
+          transparent: true, metalness: 0.88, roughness: 0.24,
+          emissive: 0x3a2304, emissiveIntensity: 0.25, depthWrite: false
+        }));
+      lastBorderAspect = vp.aspect;
+      borderFrameMesh.position.set(0, 0, Z_PLANES.fg + 0.02);
+      borderFrameMesh.renderOrder = 9;
+      plane4Group.add(borderFrameMesh);
+
+      layoutResponsivePlanes();
+      buildRoyalEnvelope();
+      buildFloatingDustParticles();
+
+      // Collect card materials so the whole card can fade in as the envelope opens
+      shadowBoxGroup.traverse(o => {
+        if (!o.isMesh) return;
+        const m = o.material;
+        m.transparent = true;
+        m.userData.baseOpacity = m.opacity;
+        if (m.isMeshStandardMaterial) {
+          m.envMapIntensity = (m === typographyMat || m === borderFrameMesh.material) ? 1.3 : 0.25;
+        }
+        cardMats.push(m);
+      });
+      shadowBoxGroup.visible = false;
+    }
+
+    function layoutResponsivePlanes() {
+      const vp = getSafeViewportSize();
+      const aspect = vp.aspect;
+      const isPortrait = aspect < 1.0;
+
+      const f0 = getFrustumSizeAtZ(0);
+      const W0 = f0.width, H0 = f0.height;
+
+      const fBg = getFrustumSizeAtZ(Z_PLANES.bg);
+      plane0Bg.scale.set(fBg.width * 1.48, fBg.height * 1.48, 1);
+
+      const fGlow = getFrustumSizeAtZ(Z_PLANES.glow);
+      plane1Glow.scale.set(fGlow.width * 1.25, fGlow.height * 1.25, 1);
+
+      // Couple
+      const coupleH = isPortrait ? H0 * 0.40 : H0 * 0.78;
+      const coupleW = coupleH * (1400 / 1600);
+      const coupleX = isPortrait ? -W0 * 0.20 : -W0 * 0.26;
+      const coupleY = isPortrait ? -H0 * 0.31 : -H0 * 0.11;
+
+      plane2Couple.scale.set(coupleW, coupleH, 1);
+      plane2Couple.userData.baseX = coupleX;
+      plane2Couple.userData.baseY = coupleY;
+      plane2Shadow.scale.set(coupleW * 1.02, coupleH * 1.02, 1);
+
+      // Typography: texture is square, so the plane must be square (no stretching).
+      // In portrait it is wider than the screen; the texture's side margins are empty.
+      const textSize = isPortrait ? Math.min(W0 * 1.5, H0 * 0.7) : Math.min(H0 * 0.9, W0 * 0.56);
+      const textX = isPortrait ? 0 : W0 * 0.19;
+      const textY = isPortrait ? H0 * 0.15 : 0.02;
+
+      plane3Text.scale.set(textSize, textSize, 1);
+      plane3Text.userData.baseX = textX;
+      plane3Text.userData.baseY = textY;
+      plane3Shadow.scale.set(textSize, textSize, 1);
+
+      // Foreground lotuses + border
+      const fFg = getFrustumSizeAtZ(Z_PLANES.fg);
+      const Wfg = fFg.width, Hfg = fFg.height;
+
+      const lotusTLSize = isPortrait ? Math.min(Wfg * 0.56, Hfg * 0.30) : Math.min(Wfg * 0.32, Hfg * 0.52);
+      const tlX = -Wfg * 0.5 + lotusTLSize * 0.42;
+      const tlY = Hfg * 0.5 - lotusTLSize * 0.40;
+      lotusTLMesh.scale.set(lotusTLSize, lotusTLSize, 1);
+      lotusTLMesh.position.set(tlX, tlY, Z_PLANES.fg);
+      lotusTLShadow.scale.set(lotusTLSize * 1.02, lotusTLSize * 1.02, 1);
+      lotusTLShadow.position.set(tlX + 0.06, tlY - 0.06, Z_PLANES.fgShadow);
+
+      const lotusBRSize = lotusTLSize * 0.72;
+      const brX = Wfg * 0.5 - lotusBRSize * 0.40;
+      const brY = -Hfg * 0.5 + lotusBRSize * 0.40;
+      lotusBRMesh.scale.set(lotusBRSize, lotusBRSize, 1);
+      lotusBRMesh.position.set(brX, brY, Z_PLANES.fg);
+      lotusBRShadow.scale.set(lotusBRSize * 1.02, lotusBRSize * 1.02, 1);
+      lotusBRShadow.position.set(brX + 0.05, brY - 0.05, Z_PLANES.fgShadow);
+
+      if (borderFrameMesh) {
+        if (Math.abs(aspect - lastBorderAspect) / lastBorderAspect > 0.05) {   // only repaint when aspect really changed
+          const newTex = new THREE.CanvasTexture(paintGoldBorderCanvas(aspect));
+          newTex.encoding = THREE.sRGBEncoding;
+          if (borderFrameMesh.material.map) borderFrameMesh.material.map.dispose();
+          borderFrameMesh.material.map = newTex;
+          borderFrameMesh.material.needsUpdate = true;
+          lastBorderAspect = aspect;
+        }
+        borderFrameMesh.scale.set(Wfg, Hfg, 1);
+      }
+
+      if (envelopeGroup) {
+        envelopeGroup.userData.baseScale = isPortrait ? Math.min(W0 / 3.9, 0.86) : Math.min(H0 / 4.2, 1.05);
+      }
+    }
+
+    function buildRoyalEnvelope() {
+      envelopeGroup = new THREE.Group();
+      envelopeGroup.position.set(0, 0.12, 1.45);
+      scene.add(envelopeGroup);
+
+      const envW = 3.4, envH = 2.35;
+
+      const envPaperTex = new THREE.CanvasTexture(paintLoktaBackgroundCanvas(1024));
+      envPaperTex.encoding = THREE.sRGBEncoding;
+
+      const paperProps = {
+        map: envPaperTex, roughness: 0.78, metalness: 0.12,
+        emissive: 0x5a0a14, emissiveIntensity: 0.55, envMapIntensity: 0.3
+      };
+      const maroonPaperMat = new THREE.MeshStandardMaterial({ ...paperProps, side: THREE.DoubleSide });
+      const flapFrontMat = new THREE.MeshStandardMaterial({ ...paperProps, side: THREE.FrontSide });
+
+      const goldBase = {
+        color: 0xf5d061, emissive: 0x3b2604, emissiveIntensity: 0.35,
+        metalness: 0.88, roughness: 0.24, envMapIntensity: 1.2
+      };
+      const goldFoilLiningMat = new THREE.MeshStandardMaterial({ ...goldBase, side: THREE.DoubleSide });
+      const flapBackMat = new THREE.MeshStandardMaterial({ ...goldBase, side: THREE.BackSide });
+
+      const backMesh = new THREE.Mesh(new THREE.PlaneGeometry(envW, envH), maroonPaperMat);
+      backMesh.position.z = -0.03;
+      envelopeGroup.add(backMesh);
+
+      const innerGoldMesh = new THREE.Mesh(new THREE.PlaneGeometry(envW - 0.08, envH - 0.08), goldFoilLiningMat);
+      innerGoldMesh.position.z = -0.022;
+      envelopeGroup.add(innerGoldMesh);
+
+      const pocketShape = new THREE.Shape();
+      pocketShape.moveTo(-envW * 0.5, -envH * 0.5);
+      pocketShape.lineTo(envW * 0.5, -envH * 0.5);
+      pocketShape.lineTo(envW * 0.5, envH * 0.48);
+      pocketShape.lineTo(0, -0.06);
+      pocketShape.lineTo(-envW * 0.5, envH * 0.48);
+      pocketShape.closePath();
+      const pocketMesh = new THREE.Mesh(new THREE.ShapeGeometry(pocketShape), maroonPaperMat);
+      pocketMesh.position.z = 0.035;
+      envelopeGroup.add(pocketMesh);
+
+      const trimPoints = [
+        new THREE.Vector3(-envW * 0.5, envH * 0.48, 0.04),
+        new THREE.Vector3(0, -0.06, 0.04),
+        new THREE.Vector3(envW * 0.5, envH * 0.48, 0.04),
+        new THREE.Vector3(envW * 0.5, -envH * 0.5, 0.04),
+        new THREE.Vector3(-envW * 0.5, -envH * 0.5, 0.04),
+        new THREE.Vector3(-envW * 0.5, envH * 0.48, 0.04)
+      ];
+      envelopeGroup.add(new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(trimPoints),
+        new THREE.LineBasicMaterial({ color: 0xf5d061 })
+      ));
+
+      // Hinged top flap
+      envFlapPivot = new THREE.Group();
+      envFlapPivot.position.set(0, envH * 0.5, 0.042);
+      envelopeGroup.add(envFlapPivot);
+
+      const flapShape = new THREE.Shape();
+      flapShape.moveTo(-envW * 0.5, 0);
+      flapShape.lineTo(envW * 0.5, 0);
+      flapShape.quadraticCurveTo(envW * 0.34, -envH * 0.34, 0, -envH * 0.58);
+      flapShape.quadraticCurveTo(-envW * 0.34, -envH * 0.34, -envW * 0.5, 0);
+      flapShape.closePath();
+      const flapGeo = new THREE.ShapeGeometry(flapShape);
+
+      envFlapPivot.add(new THREE.Mesh(flapGeo, flapFrontMat));   // maroon outside
+      envFlapPivot.add(new THREE.Mesh(flapGeo, flapBackMat));    // gold inside, shown once flipped open
+
+      const flapCurvePts = flapShape.getPoints(48).map(p => new THREE.Vector3(p.x, p.y, 0.008));
+      envFlapPivot.add(new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(flapCurvePts),
+        new THREE.LineBasicMaterial({ color: 0xf5d061 })
+      ));
+
+      // Wax seal
+      const { colorCanvas: sealColor, bumpCanvas: sealBump } = paintWaxSealCanvases();
+      const sealTex = new THREE.CanvasTexture(sealColor);
+      sealTex.encoding = THREE.sRGBEncoding;
+      waxSealMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.84, 0.84),
+        new THREE.MeshStandardMaterial({
+          map: sealTex, bumpMap: new THREE.CanvasTexture(sealBump), bumpScale: 0.035,
+          metalness: 0.88, roughness: 0.22, transparent: true, opacity: 1
+        })
+      );
+      waxSealMesh.position.set(0, -0.14, 0.068);
+      waxSealMesh.renderOrder = 30;
+      envelopeGroup.add(waxSealMesh);
+
+      // Sparkle burst
+      const burstCount = 70;
+      const burstPositions = new Float32Array(burstCount * 3);
+      for (let i = 0; i < burstCount; i++) {
+        burstPositions[i * 3 + 1] = -0.14;
+        burstPositions[i * 3 + 2] = 0.1;
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.6 + Math.random() * 2.2;
+        sealBurstVelocities.push({ vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed + 0.4, vz: 0.5 + Math.random() * 1.8 });
+      }
+      const burstGeo = new THREE.BufferGeometry();
+      burstGeo.setAttribute('position', new THREE.BufferAttribute(burstPositions, 3));
+      sealBurstParticles = new THREE.Points(burstGeo, new THREE.PointsMaterial({
+        color: 0xfff1b8, size: 0.085, transparent: true, opacity: 0,
+        blending: THREE.AdditiveBlending, depthWrite: false
+      }));
+      sealBurstParticles.renderOrder = 35;
+      sealBurstParticles.frustumCulled = false;
+      envelopeGroup.add(sealBurstParticles);
+
+      layoutResponsivePlanes();
+    }
+
+    function buildFloatingDustParticles() {
+      const count = 130;
+      const positions = new Float32Array(count * 3);
+      for (let i = 0; i < count; i++) {
+        positions[i * 3] = (Math.random() - 0.5) * 10;
+        positions[i * 3 + 1] = (Math.random() - 0.5) * 8;
+        positions[i * 3 + 2] = -1.2 + Math.random() * 2.3;
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      dustParticles = new THREE.Points(geo, new THREE.PointsMaterial({
+        color: 0xf5d061, size: 0.042, transparent: true, opacity: 0.68,
+        blending: THREE.AdditiveBlending, depthWrite: false
+      }));
+      dustParticles.renderOrder = 9;
+      scene.add(dustParticles);
+    }
+
+    // =========================================================
+    // 4. GYROSCOPE
+    // =========================================================
+    const gyro = { listening: false, base: null, lastAngle: null, seen: false };
+    const wrap180 = d => { while (d > 180) d -= 360; while (d < -180) d += 360; return d; };
+    const screenAngle = () =>
+      (screen.orientation && typeof screen.orientation.angle === 'number')
+        ? screen.orientation.angle
+        : (typeof window.orientation === 'number' ? (window.orientation + 360) % 360 : 0);
+
+    function onDeviceOrientation(e) {
+      if (e.beta === null || e.gamma === null) return;
+      if (!gyro.seen) {
+        gyro.seen = true;
+        document.getElementById('gyro-btn-label').textContent = 'सेन्सर सक्रिय';
+      }
+      state.gyroActive = true;
+
+      const ang = screenAngle();
+      if (!gyro.base || gyro.lastAngle !== ang) {          // calibrate on start, recalibrate, or rotation
+        gyro.base = { b: e.beta, g: e.gamma };
+        gyro.lastAngle = ang;
+      }
+      gyro.base.b += wrap180(e.beta - gyro.base.b) * 0.0015;   // slow auto-recentre
+      gyro.base.g += (e.gamma - gyro.base.g) * 0.0015;
+
+      const dB = THREE.MathUtils.clamp(wrap180(e.beta - gyro.base.b), -36, 36);
+      const dG = THREE.MathUtils.clamp(e.gamma - gyro.base.g, -36, 36);
+
+      let tx, ty;                                          // device axes -> screen axes
+      switch (ang) {
+        case 90:  tx = -dG; ty =  dB; break;
+        case 180: tx = -dB; ty = -dG; break;
+        case 270: tx =  dG; ty = -dB; break;
+        default:  tx =  dB; ty =  dG;
+      }
+      state.gyroTiltX = THREE.MathUtils.degToRad(tx * 0.55);
+      state.gyroTiltY = THREE.MathUtils.degToRad(ty * 0.72);
+    }
+
+    async function enableGyroscope(explicit = false) {
+      if (!window.isSecureContext) {
+        if (explicit) showToast('Gyro needs HTTPS (or localhost). Host the page securely.');
+        return;
+      }
+      if (typeof DeviceOrientationEvent === 'undefined') {
+        if (explicit) showToast('Desktop: move the cursor to explore 3D parallax');
+        return;
+      }
+      if (gyro.listening) {
+        if (explicit) { gyro.base = null; showToast('सेन्सर रिसेट गरियो (Recalibrated)'); }
+        return;
+      }
+      const needsPermission = typeof DeviceOrientationEvent.requestPermission === 'function';   // iOS 13+
+      if (needsPermission && !explicit) return;            // iOS only allows the prompt inside a tap
+      try {
+        if (needsPermission) {
+          const perm = await DeviceOrientationEvent.requestPermission();
+          if (perm !== 'granted') {
+            showToast('Motion denied. iOS: Settings > Safari > Motion & Orientation Access');
+            return;
+          }
+        }
+        window.addEventListener('deviceorientation', onDeviceOrientation, true);
+        gyro.listening = true;
+        gyro.base = null;
+        setTimeout(() => {
+          if (!gyro.seen && explicit) showToast('No motion data from this device/browser');
+        }, 1500);
+      } catch (err) {
+        if (explicit) showToast('Could not access the motion sensor');
+      }
+    }
+
+    // =========================================================
+    // 5. UI & INTERACTIONS
+    // =========================================================
+    function showToast(msg) {
+      const el = document.getElementById('toast-banner');
+      el.textContent = msg;
+      el.style.opacity = '1';
+      clearTimeout(el._timer);
+      el._timer = setTimeout(() => { el.style.opacity = '0'; }, 3200);
+    }
+
+    function triggerOpenEnvelope() {
+      if (state.envelopeMode === 'opening' || state.envelopeMode === 'opened') return;
+
+      enableGyroscope(true);   // must run inside the tap for iOS permission
+
+      state.envelopeMode = 'opening';
+
+      const promptBtn = document.getElementById('open-envelope-prompt');
+      promptBtn.style.opacity = '0';
+      promptBtn.style.pointerEvents = 'none';
+
+      document.getElementById('webgl-container').classList.add('opened');
+
+      setTimeout(() => {
+        if (state.envelopeMode === 'closing' || state.envelopeMode === 'closed') return;
+        const bar = document.getElementById('control-bar');
+        bar.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
+        bar.classList.add('opacity-100', 'translate-y-0', 'pointer-events-auto');
+      }, 1100);
+    }
+
+    function triggerReplayEnvelope() {
+      if (state.envelopeMode === 'closing' || state.envelopeMode === 'closed') return;
+      toggleEditDrawer(false);
+      state.envelopeMode = 'closing';
+      const bar = document.getElementById('control-bar');
+      bar.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
+      bar.classList.remove('opacity-100', 'translate-y-0', 'pointer-events-auto');
+      document.getElementById('webgl-container').classList.remove('opened');
+    }
+
+    function toggleEditDrawer(forceOpen) {
+      const drawer = document.getElementById('edit-drawer');
+      const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : drawer.classList.contains('pointer-events-none');
+      if (shouldOpen) {
+        drawer.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
+        drawer.classList.add('opacity-100', 'translate-y-0', 'pointer-events-auto');
+      } else {
+        drawer.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
+        drawer.classList.remove('opacity-100', 'translate-y-0', 'pointer-events-auto');
+      }
+    }
+
+    function setupUIEvents() {
+      const container = document.getElementById('webgl-container');
+
+      // Mouse / touch parallax is ignored once the gyroscope is delivering data
+      window.addEventListener('mousemove', (e) => {
+        if (state.gyroActive) return;
+        state.mouseNormX = (e.clientX / window.innerWidth) * 2 - 1;
+        state.mouseNormY = (e.clientY / window.innerHeight) * 2 - 1;
+      }, { passive: true });
+
+      window.addEventListener('touchmove', (e) => {
+        if (!state.gyroActive && e.touches && e.touches.length > 0) {
+          const t = e.touches[0];
+          state.mouseNormX = (t.clientX / window.innerWidth) * 2 - 1;
+          state.mouseNormY = (t.clientY / window.innerHeight) * 2 - 1;
+        }
+      }, { passive: true });
+
+      container.addEventListener('click', () => {
+        if (state.envelopeMode === 'closed') triggerOpenEnvelope();
+      });
+
+      document.getElementById('open-envelope-prompt').addEventListener('click', (e) => {
+        e.stopPropagation();
+        triggerOpenEnvelope();
+      });
+
+      document.getElementById('replay-envelope-btn').addEventListener('click', triggerReplayEnvelope);
+      document.getElementById('gyro-btn').addEventListener('click', () => enableGyroscope(true));
+      document.getElementById('edit-btn').addEventListener('click', () => toggleEditDrawer());
+      document.getElementById('close-drawer-btn').addEventListener('click', () => toggleEditDrawer(false));
+
+      const updateCardTextures = () => {
+        cardData.guest = document.getElementById('input-guest').value;
+        cardData.groom = document.getElementById('input-groom').value;
+        cardData.bride = document.getElementById('input-bride').value;
+        cardData.date = document.getElementById('input-date').value;
+        cardData.venue = document.getElementById('input-venue').value;
+        cardData.host = document.getElementById('input-host').value;
+
+        const aniso = renderer.capabilities.getMaxAnisotropy();
+        const { colorCanvas, foilCanvas } = paintGoldTypographyCanvases();
+
+        const newTextTex = new THREE.CanvasTexture(colorCanvas);
+        newTextTex.encoding = THREE.sRGBEncoding;
+        newTextTex.anisotropy = aniso;
+        const newFoilTex = new THREE.CanvasTexture(foilCanvas);
+        newFoilTex.anisotropy = aniso;
+        const newShadowTex = new THREE.CanvasTexture(generatePaperCutShadowCanvas(foilCanvas, 18));
+
+        if (typographyMat.map) typographyMat.map.dispose();
+        if (typographyMat.metalnessMap) typographyMat.metalnessMap.dispose();
+        if (plane3Shadow.material.map) plane3Shadow.material.map.dispose();
+
+        typographyMat.map = newTextTex;
+        typographyMat.metalnessMap = newFoilTex;
+        typographyMat.roughnessMap = newFoilTex;
+        typographyMat.bumpMap = newFoilTex;
+        typographyMat.needsUpdate = true;
+
+        plane3Shadow.material.map = newShadowTex;
+        plane3Shadow.material.needsUpdate = true;
+      };
+
+      const updateCoupleTexture = (imgObj) => {
+        customCoupleImage = imgObj;
+        const cCanvas = paintNepaliCoupleCanvas(imgObj);
+        const cTex = new THREE.CanvasTexture(cCanvas);
+        cTex.encoding = THREE.sRGBEncoding;
+        cTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+        const cShadowTex = new THREE.CanvasTexture(generatePaperCutShadowCanvas(cCanvas, 26));
+
+        if (plane2Couple.material.map) plane2Couple.material.map.dispose();
+        if (plane2Shadow.material.map) plane2Shadow.material.map.dispose();
+
+        plane2Couple.material.map = cTex;
+        plane2Couple.material.needsUpdate = true;
+        plane2Shadow.material.map = cShadowTex;
+        plane2Shadow.material.needsUpdate = true;
+      };
+
+      ['input-guest', 'input-groom', 'input-bride', 'input-date', 'input-venue', 'input-host'].forEach(id => {
+        document.getElementById(id).addEventListener('input', updateCardTextures);
+      });
+
+      document.getElementById('invitation-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        updateCardTextures();
+        toggleEditDrawer(false);
+        showToast('निमन्त्रणा विवरण अपडेट भयो!');
+      });
+
+      document.getElementById('input-couple-img').addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const img = new Image();
+          img.onload = () => {
+            updateCoupleTexture(img);
+            document.getElementById('upload-label').textContent = file.name.slice(0, 18);
+            document.getElementById('clear-couple-img-btn').classList.remove('hidden');
+            showToast('नयाँ तस्वीर अपडेट भयो');
+          };
+          img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+
+      document.getElementById('clear-couple-img-btn').addEventListener('click', () => {
+        document.getElementById('input-couple-img').value = '';
+        document.getElementById('upload-label').textContent = 'तस्वीर छान्नुहोस् (Upload PNG/JPG)';
+        document.getElementById('clear-couple-img-btn').classList.add('hidden');
+        updateCoupleTexture(null);
+        showToast('मूल चित्र पुन:स्थापित गरियो');
+      });
+
+      document.getElementById('reset-text-btn').addEventListener('click', () => {
+        ['guest', 'groom', 'bride'].forEach(k => { document.getElementById('input-' + k).value = ''; });
+        document.getElementById('input-date').value = DEFAULT_DATA.date;
+        document.getElementById('input-venue').value = DEFAULT_DATA.venue;
+        document.getElementById('input-host').value = DEFAULT_DATA.host;
+        updateCardTextures();
+        showToast('मूल विवरण पुन:स्थापित गरियो');
+      });
+
+      let resizeTimer = null;
+      const onResize = () => {
+        const vp = getSafeViewportSize();
+        camera.aspect = vp.aspect;
+        camera.updateProjectionMatrix();
+        renderer.setSize(vp.width, vp.height);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        layoutResponsivePlanes();
+      };
+      window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(onResize, 120);
+      });
+      window.addEventListener('orientationchange', () => setTimeout(onResize, 250));
+
+      enableGyroscope(false);   // Android / non-permission browsers start immediately
+    }
+
+    // =========================================================
+    // 6. ANIMATION LOOP
+    // =========================================================
+    const clock = new THREE.Clock();
+
+    function easeInOutCubic(x) {
+      return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const dt = Math.min(clock.getDelta(), 0.05);
+      const elapsed = clock.getElapsedTime();
+
+      if (state.envelopeMode === 'opening') {
+        state.openProgress = Math.min(1, state.openProgress + dt * 0.44);
+        if (state.openProgress >= 1) state.envelopeMode = 'opened';
+      } else if (state.envelopeMode === 'closing') {
+        state.openProgress = Math.max(0, state.openProgress - dt * 0.55);
+        if (state.openProgress <= 0) {
+          state.envelopeMode = 'closed';
+          const promptBtn = document.getElementById('open-envelope-prompt');
+          promptBtn.style.opacity = '1';
+          promptBtn.style.pointerEvents = 'auto';
+        }
+      }
+
+      const p = state.openProgress;
+
+      // Input: gyro wins over mouse when active
+      const mx = state.gyroActive ? 0 : state.mouseNormX;
+      const my = state.gyroActive ? 0 : state.mouseNormY;
+      const targetX = my * 0.22 + state.gyroTiltX;
+      const targetY = mx * 0.28 + state.gyroTiltY;
+      state.smoothTiltX += (targetX - state.smoothTiltX) * 0.09;
+      state.smoothTiltY += (targetY - state.smoothTiltY) * 0.09;
+      const tiltX = THREE.MathUtils.clamp(state.smoothTiltX, -0.45, 0.45);
+      const tiltY = THREE.MathUtils.clamp(state.smoothTiltY, -0.52, 0.52);
+
+      // ----- Envelope -----
+      if (envelopeGroup) {
+        const visible = p < 0.99;
+        envelopeGroup.visible = visible;
+
+        if (visible) {
+          const baseScale = envelopeGroup.userData.baseScale || 1;
+          const idleFloat = Math.sin(elapsed * 1.8) * 0.045 * (1 - p);
+
+          // A: seal lifts and dissolves
+          const sealT = THREE.MathUtils.clamp(p / 0.25, 0, 1);
+          waxSealMesh.visible = sealT < 0.99;
+          waxSealMesh.position.z = 0.068 + sealT * 0.35;
+          const sealScale = 1 + Math.sin(sealT * Math.PI * 0.75) * 0.26;
+          waxSealMesh.scale.set(sealScale, sealScale, 1);
+          waxSealMesh.material.opacity = 1 - easeInOutCubic(sealT);
+
+          if (p > 0.04 && p < 0.55) {
+            const burstT = THREE.MathUtils.clamp((p - 0.04) / 0.45, 0, 1);
+            sealBurstParticles.material.opacity = Math.sin(burstT * Math.PI) * 0.95;
+            const posAttr = sealBurstParticles.geometry.attributes.position;
+            for (let i = 0; i < sealBurstVelocities.length; i++) {
+              const v = sealBurstVelocities[i];
+              posAttr.array[i * 3] = v.vx * burstT * 1.4;
+              posAttr.array[i * 3 + 1] = -0.14 + v.vy * burstT * 1.4;
+              posAttr.array[i * 3 + 2] = 0.1 + v.vz * burstT * 1.2;
+            }
+            posAttr.needsUpdate = true;
+          } else {
+            sealBurstParticles.material.opacity = 0;
+          }
+
+          // B: flap hinges open
+          const flapT = easeInOutCubic(THREE.MathUtils.clamp((p - 0.16) / 0.38, 0, 1));
+          envFlapPivot.rotation.x = -flapT * (Math.PI * 0.95);
+
+          // C: envelope glides down as the card emerges
+          const exitT = easeInOutCubic(THREE.MathUtils.clamp((p - 0.45) / 0.53, 0, 1));
+          envelopeGroup.position.y = 0.12 + idleFloat - exitT * 6.5;
+          envelopeGroup.position.z = 1.45 - exitT * 0.8;
+          envelopeGroup.rotation.x = tiltX * 0.75 + exitT * 0.35;
+          envelopeGroup.rotation.y = tiltY * 0.85;
+          envelopeGroup.scale.setScalar(baseScale * (1 - exitT * 0.15));
+        }
+      }
+
+      // ----- Card shadow-box -----
+      if (shadowBoxGroup) {
+        const expandT = easeInOutCubic(THREE.MathUtils.clamp((p - 0.38) / 0.62, 0, 1));
+        const fade = THREE.MathUtils.clamp((p - 0.32) / 0.3, 0, 1);
+        const depth = expandT;
+
+        shadowBoxGroup.visible = fade > 0.001;
+        shadowBoxGroup.scale.setScalar(0.88 + 0.12 * expandT);
+        shadowBoxGroup.position.y = -0.7 * (1 - expandT);
+        shadowBoxGroup.rotation.x = tiltX * 0.38 * depth;
+        shadowBoxGroup.rotation.y = tiltY * 0.46 * depth;
+
+        const px = tiltY;
+        const py = -tiltX;
+
+        plane0Bg.position.x = -px * 0.55 * depth;
+        plane0Bg.position.y = -py * 0.42 * depth;
+
+        plane1Glow.position.x = -px * 0.32 * depth;
+        plane1Glow.position.y = -py * 0.25 * depth;
+
+        const cx = plane2Couple.userData.baseX - px * 0.14 * depth;
+        const cy = plane2Couple.userData.baseY - py * 0.12 * depth;
+        plane2Couple.position.set(cx, cy, THREE.MathUtils.lerp(0.0, Z_PLANES.couple, depth));
+        plane2Shadow.position.set(cx + 0.065 + px * 0.04, cy - 0.055 + py * 0.04, THREE.MathUtils.lerp(-0.01, Z_PLANES.coupleShadow, depth));
+
+        const tx = plane3Text.userData.baseX + px * 0.18 * depth;
+        const ty = plane3Text.userData.baseY + py * 0.14 * depth;
+        plane3Text.position.set(tx, ty, THREE.MathUtils.lerp(0.01, Z_PLANES.text, depth));
+        plane3Shadow.position.set(tx + 0.045 + px * 0.035, ty - 0.045 + py * 0.035, THREE.MathUtils.lerp(0.0, Z_PLANES.textShadow, depth));
+
+        plane4Group.position.set(px * 0.34 * depth, py * 0.26 * depth, THREE.MathUtils.lerp(-0.63, 0, depth));
+
+        // Fade the whole card in; shadows keep their own base opacity
+        for (let i = 0; i < cardMats.length; i++) {
+          cardMats[i].opacity = cardMats[i].userData.baseOpacity * fade * (cardMats[i].userData.isShadow ? depth : 1);
+        }
+      }
+
+      if (keyLight) {
+        keyLight.position.x += (1.4 + tiltY * 6.5 - keyLight.position.x) * 0.1;
+        keyLight.position.y += (1.8 - tiltX * 5.2 - keyLight.position.y) * 0.1;
+      }
+
+      if (dustParticles) {
+        dustParticles.rotation.y = elapsed * 0.035;
+        dustParticles.position.y = Math.sin(elapsed * 0.55) * 0.16;
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    // =========================================================
+    // 7. START (wait for the fonts the canvas actually uses)
+    // =========================================================
+    window.addEventListener('load', async () => {
+      try {
+        if (document.fonts && document.fonts.load) {
+          await Promise.race([
+            Promise.all([
+              document.fonts.load('400 210px "Rozha One"', 'शुभ विवाह'),
+              document.fonts.load('600 64px "Noto Serif Devanagari"', 'श्रीमान्'),
+              document.fonts.load('700 66px "Noto Serif Devanagari"', 'मिति')
+            ]),
+            new Promise(r => setTimeout(r, 4000))
+          ]);
+        }
+      } catch (err) { /* continue with fallback fonts */ }
+
+      initScene();
+
+      // Mark shadow materials so their opacity also scales with card depth
+      [plane2Shadow, plane3Shadow, lotusTLShadow, lotusBRShadow].forEach(m => { m.material.userData.isShadow = true; });
+
+      setupUIEvents();
+      animate();
+    });
+  </script>
+</body>
+</html>
