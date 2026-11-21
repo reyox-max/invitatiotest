@@ -245,6 +245,7 @@
       mouseNormX: 0, mouseNormY: 0,
       smoothTiltX: 0, smoothTiltY: 0,
       gyroActive: false,
+      smoothDt: 0.016, shownProgress: 0, dprDropped: false,
       gyroAutoOff: false,       // true when gyro was switched off automatically (slow device)
       openStartedAt: 0, slowAccum: 0,
       gyroTiltX: 0, gyroTiltY: 0,
@@ -420,20 +421,46 @@
       return canvas;
     }
 
+    // ---- Card layout: portrait card on tall screens, landscape card on wide screens ----
+    function currentLayoutParams() {
+      const vp = getSafeViewportSize();
+      const q = Math.round(vp.aspect / 0.02) * 0.02;
+      if (vp.aspect < 1) return { mode: 'portrait', aspect: THREE.MathUtils.clamp(q, 0.52, ART.aspect) };
+      return { mode: 'landscape', aspect: THREE.MathUtils.clamp(q, 1.25, 2.1) };
+    }
+
+    function computeCardLayout(mode, aspect) {
+      const asp = r => ((r.x1 - r.x0) * ART.aspect) / (r.y1 - r.y0);
+      const cA = asp(ART.couple), tA = asp(ART.lotusTL), bA = asp(ART.lotusBR);
+      let W, H, couple, tl, br;
+      const rect = (x, y, w, h) => ({ x0: x / W, x1: (x + w) / W, y0: y / H, y1: (y + h) / H, px: x, py: y, pw: w, ph: h });
+      if (mode === 'portrait') {
+        W = 1000; H = 1000 / aspect;
+        const ch = 836, tw = (ART.lotusTL.x1 - ART.lotusTL.x0) * 1000, bw = (ART.lotusBR.x1 - ART.lotusBR.x0) * 1000;
+        couple = rect(0, H - ch, ch * cA, ch);
+        tl = rect(0, 0, tw, tw / tA);
+        br = rect(W - bw, H - bw / bA, bw, bw / bA);
+      } else {
+        H = 1000; W = 1000 * aspect;
+        const ch = 700, th = 260, bh = 300;
+        couple = rect(70, H - ch, ch * cA, ch);
+        tl = rect(0, 0, th * tA, th);
+        br = rect(W - bh * bA, H - bh, bh * bA, bh);
+      }
+      Object.assign(LAYOUT, { mode, aspect, W, H, k: mode === 'portrait' ? 1.3 : 1.2, couple, tl, br });
+    }
+
     function paintGoldTypographyCanvases() {
-      // Design space is 1000 wide; text sits in the empty maroon areas of the reference art
-      const CW = 1536, CH = Math.round(CW / ART.aspect), k = CW / 1000;
-      const colorCanvas = createHiResCanvas(CW, CH);
-      const foilCanvas = createHiResCanvas(CW, CH);
+      const { W, H, k, mode } = LAYOUT;
+      const colorCanvas = createHiResCanvas(Math.round(W * k), Math.round(H * k));
+      const foilCanvas = createHiResCanvas(Math.round(W * k), Math.round(H * k));
       const cCtx = colorCanvas.getContext('2d');
       const fCtx = foilCanvas.getContext('2d');
       cCtx.scale(k, k); fCtx.scale(k, k);
-      const TX = 612, LX = 670;
 
-      const drawGanesha = (ctx, style) => {
+      const drawGanesha = (ctx, style, x, y, sc) => {
         ctx.save();
-        ctx.translate(TX, 128);
-        ctx.scale(1.15, 1.15);
+        ctx.translate(x, y); ctx.scale(sc, sc);
         ctx.fillStyle = style; ctx.strokeStyle = style;
         ctx.lineCap = 'round'; ctx.lineJoin = 'round';
         ctx.beginPath(); ctx.moveTo(-16, -24); ctx.lineTo(0, -46); ctx.lineTo(16, -24); ctx.closePath(); ctx.fill();
@@ -449,10 +476,11 @@
         ctx.beginPath(); ctx.moveTo(-26, 31); ctx.quadraticCurveTo(0, 40, 26, 31); ctx.stroke();
         ctx.restore();
       };
-      drawGanesha(cCtx, createGoldGradient(cCtx, TX - 50, 70, TX + 50, 175));
-      drawGanesha(fCtx, '#ffffff');
-
-      const drawFoilLine = (text, y, font, maxW = 700, x = TX) => {
+      const ganesha = (x, y, sc) => {
+        drawGanesha(cCtx, createGoldGradient(cCtx, x - 50 * sc, y - 55 * sc, x + 50 * sc, y + 45 * sc), x, y, sc);
+        drawGanesha(fCtx, '#ffffff', x, y, sc);
+      };
+      const line = (text, y, font, maxW, x) => {
         cCtx.save();
         cCtx.font = font; cCtx.textAlign = 'center'; cCtx.textBaseline = 'middle';
         cCtx.lineWidth = 3.2; cCtx.lineJoin = 'round';
@@ -469,33 +497,76 @@
       };
 
       const SERIF = '"Noto Serif Devanagari", serif';
+      const TITLE = '"Rozha One", "Yatra One", ' + SERIF;
       const wrap = t => { const p = t.split(/,\s*/).filter(Boolean); return p.map((l, i) => i < p.length - 1 ? l + ',' : l); };
-
-      drawFoilLine('शुभ विवाह', 300, '400 128px "Rozha One", "Yatra One", ' + SERIF, 580);
-
       const guestVal = cardData.guest.trim() || '____________________';
-      drawFoilLine(`श्रीमान् / श्रीमती ${guestVal}`, 395, '600 33px ' + SERIF, 680);
-
       const groomVal = cardData.groom.trim() || '______________';
       const brideVal = cardData.bride.trim() || '______________';
-      [
-        `हाम्रा आदरणीय सुपुत्र ${groomVal}`,
-        `र सुपुत्री ${brideVal} को`,
-        `शुभ-विवाहको पावन अवसरमा यहाँको`,
-        `गरिमामय उपस्थितिको लागि`,
-        `हार्दिक निमन्त्रणा गर्दछौं।`
-      ].forEach((line, i) => drawFoilLine(line, 470 + i * 60, '600 38px ' + SERIF, 660));
+      const guestLine = `श्रीमान् / श्रीमती ${guestVal}`;
+      const body = [
+        `हाम्रा आदरणीय सुपुत्र ${groomVal}`, `र सुपुत्री ${brideVal} को`,
+        `शुभ-विवाहको पावन अवसरमा यहाँको`, `गरिमामय उपस्थितिको लागि`, `हार्दिक निमन्त्रणा गर्दछौं।`
+      ];
+      const dateLines = wrap(`मिति: ${cardData.date.trim() || DEFAULT_DATA.date}`);
+      const venueLines = wrap(`स्थान: ${cardData.venue.trim() || DEFAULT_DATA.venue}`);
+      const hostLine = `दर्शनाभिलाषी: ${cardData.host.trim() || DEFAULT_DATA.host}`;
 
-      let y = 830;
-      const block = (text, font, gap) => wrap(text).forEach(l => { drawFoilLine(l, y, font, 430, LX); y += gap; });
-      block(`मिति: ${cardData.date.trim() || DEFAULT_DATA.date}`, '700 35px ' + SERIF, 55);
-      y += 25;
-      block(`स्थान: ${cardData.venue.trim() || DEFAULT_DATA.venue}`, '700 35px ' + SERIF, 55);
-      y += 20;
-      drawFoilLine(`दर्शनाभिलाषी: ${cardData.host.trim() || DEFAULT_DATA.host}`, y, '700 36px ' + SERIF, 420, LX);
+      if (mode === 'portrait') {
+        const shift = H - 1512, up = Math.max(0, shift) * 0.4;
+        const TX = 612, LX = 670;
+        ganesha(TX, 128 + up, 1.15);
+        line('शुभ विवाह', 300 + up, '400 128px ' + TITLE, 580, TX);
+        line(guestLine, 395 + up, '600 33px ' + SERIF, 680, TX);
+        body.forEach((l, i) => line(l, 470 + up + i * 60, '600 38px ' + SERIF, 660, TX));
+        let y = 830 + shift;
+        dateLines.forEach(l => { line(l, y, '700 35px ' + SERIF, 430, LX); y += 55; });
+        y += 25;
+        venueLines.forEach(l => { line(l, y, '700 35px ' + SERIF, 430, LX); y += 55; });
+        y += 20;
+        line(hostLine, y, '700 36px ' + SERIF, 420, LX);
+      } else {
+        const xL = LAYOUT.couple.px + LAYOUT.couple.pw + 0.06 * H;
+        const xR = Math.min(W - 0.04 * H, LAYOUT.br.px - 0.04 * H);
+        const cx = (xL + xR) / 2, wAvail = Math.min(xR - xL, 900);
+        const f = THREE.MathUtils.clamp(wAvail / 760, 0.7, 1), z = n => Math.round(n * f);
+        ganesha(cx, 82, 1.0 * f + 0.1);
+        line('शुभ विवाह', 205, `400 ${z(120)}px ` + TITLE, wAvail, cx);
+        line(guestLine, 312, `600 ${z(32)}px ` + SERIF, wAvail, cx);
+        body.forEach((l, i) => line(l, 390 + i * 56, `600 ${z(38)}px ` + SERIF, wAvail, cx));
+        let y = 705;
+        dateLines.forEach(l => { line(l, y, `700 ${z(36)}px ` + SERIF, wAvail, cx); y += 52; });
+        y += 6;
+        venueLines.forEach(l => { line(l, y, `700 ${z(36)}px ` + SERIF, wAvail, cx); y += 52; });
+        y += 14;
+        line(hostLine, y, `700 ${z(36)}px ` + SERIF, wAvail, cx);
+      }
 
       lastTextCanvas = colorCanvas;
       return { colorCanvas, foilCanvas };
+    }
+
+    function applyTypographyTextures() {
+      const aniso = renderer.capabilities.getMaxAnisotropy();
+      const { colorCanvas, foilCanvas } = paintGoldTypographyCanvases();
+      const newTextTex = new THREE.CanvasTexture(colorCanvas);
+      newTextTex.encoding = THREE.sRGBEncoding;
+      newTextTex.anisotropy = aniso;
+      const newFoilTex = new THREE.CanvasTexture(foilCanvas);
+      newFoilTex.anisotropy = aniso;
+      const newShadowTex = new THREE.CanvasTexture(generatePaperCutShadowCanvas(foilCanvas, 18));
+
+      if (typographyMat.map) typographyMat.map.dispose();
+      if (typographyMat.metalnessMap) typographyMat.metalnessMap.dispose();
+      if (plane3Shadow.material.map) plane3Shadow.material.map.dispose();
+
+      typographyMat.map = newTextTex;
+      typographyMat.metalnessMap = newFoilTex;
+      typographyMat.roughnessMap = newFoilTex;
+      typographyMat.bumpMap = newFoilTex;
+      typographyMat.needsUpdate = true;
+      plane3Shadow.material.map = newShadowTex;
+      plane3Shadow.material.needsUpdate = true;
+      refreshLetterTexture();
     }
 
     function paintGoldBorderCanvas(aspect = 0.66) {
@@ -600,8 +671,10 @@
     let typographyMat, keyLight, rimLight, dustParticles;
     let cardMats = [];
     let letterMesh;
-    const LETTER_H = 2.05, LETTER_W = LETTER_H * ART.aspect, RISE_Y = 0.55;
     const CARD = { w: 1, h: 1 };
+    const ENV = { aspect: 0 };     // current envelope dimensions (set in buildRoyalEnvelope)
+    const LAYOUT = { mode: '', aspect: 0, W: 1000, H: 1500, k: 1.3, couple: null, tl: null, br: null };
+    let envMode = '';
     let lastTextCanvas = null, lastCoupleCanvas = null;
     let lastBorderAspect = 0;
 
@@ -651,6 +724,8 @@
     function initScene() {
       const container = document.getElementById('webgl-container');
       const vp = getSafeViewportSize();
+      const lp0 = currentLayoutParams();
+      computeCardLayout(lp0.mode, lp0.aspect);
 
       scene = new THREE.Scene();
       scene.background = new THREE.Color(0x240106);
@@ -763,17 +838,16 @@
 
       borderFrameMesh = new THREE.Mesh(plane(),
         new THREE.MeshStandardMaterial({
-          map: makeTex(paintGoldBorderCanvas(ART.aspect)),
+          map: makeTex(paintGoldBorderCanvas(LAYOUT.aspect)),
           transparent: true, metalness: 0.88, roughness: 0.24,
           emissive: 0x3a2304, emissiveIntensity: 0.25, depthWrite: false
         }));
-      lastBorderAspect = vp.aspect;
+      lastBorderAspect = LAYOUT.aspect;
       borderFrameMesh.position.set(0, 0, Z_PLANES.fg + 0.02);
       borderFrameMesh.renderOrder = 9;
       plane4Group.add(borderFrameMesh);
 
       layoutResponsivePlanes();
-      buildRoyalEnvelope();
       buildFloatingDustParticles();
 
       // Collect card materials so the whole card can fade in as the envelope opens
@@ -791,8 +865,12 @@
     }
 
     function layoutResponsivePlanes() {
-      const vp = getSafeViewportSize();
-      const isPortrait = vp.aspect < 1.0;
+      const lp = currentLayoutParams();
+      if (lp.mode !== LAYOUT.mode || Math.abs(lp.aspect - LAYOUT.aspect) > 0.001) {
+        computeCardLayout(lp.mode, lp.aspect);        // orientation / shape changed: new card layout
+        if (typographyMat) applyTypographyTextures();
+      }
+
       const f0 = getFrustumSizeAtZ(0);
       const W0 = f0.width, H0 = f0.height;
 
@@ -801,9 +879,9 @@
       const fGlow = getFrustumSizeAtZ(Z_PLANES.glow);
       plane1Glow.scale.set(fGlow.width * 1.25, fGlow.height * 1.25, 1);
 
-      // The invitation is one portrait card that always fits the screen
-      const cardH = Math.min(H0 * 0.94, (W0 * 0.985) / ART.aspect);
-      const cardW = cardH * ART.aspect;
+      // Card: portrait on tall screens, landscape on wide ones, always fitted to the viewport
+      const cardH = Math.min(H0 * 0.97, (W0 * 0.985) / LAYOUT.aspect);
+      const cardW = cardH * LAYOUT.aspect;
       CARD.w = cardW; CARD.h = cardH;
 
       const FULL = { x0: 0, x1: 1, y0: 0, y1: 1 };
@@ -813,29 +891,48 @@
         mesh.userData.cx = ((r.x0 + r.x1) / 2 - 0.5) * cardW;
         mesh.userData.cy = (0.5 - (r.y0 + r.y1) / 2) * cardH;
       };
-      box(plane2Couple, ART.couple);   box(plane2Shadow, ART.couple);
-      box(plane3Text, FULL);           box(plane3Shadow, FULL);
-      box(lotusTLMesh, ART.lotusTL);   box(lotusTLShadow, ART.lotusTL);
-      box(lotusBRMesh, ART.lotusBR);   box(lotusBRShadow, ART.lotusBR);
+      box(plane2Couple, LAYOUT.couple); box(plane2Shadow, LAYOUT.couple);
+      box(plane3Text, FULL);            box(plane3Shadow, FULL);
+      box(lotusTLMesh, LAYOUT.tl);      box(lotusTLShadow, LAYOUT.tl);
+      box(lotusBRMesh, LAYOUT.br);      box(lotusBRShadow, LAYOUT.br);
       box(borderFrameMesh, FULL);
 
-      if (envelopeGroup) {
-        envelopeGroup.userData.baseScale = isPortrait ? Math.min(W0 / 3.9, 0.86) : Math.min(H0 / 4.2, 1.05);
+      if (Math.abs(LAYOUT.aspect - lastBorderAspect) > 0.001) {
+        const t = new THREE.CanvasTexture(paintGoldBorderCanvas(LAYOUT.aspect));
+        t.encoding = THREE.sRGBEncoding;
+        if (borderFrameMesh.material.map) borderFrameMesh.material.map.dispose();
+        borderFrameMesh.material.map = t;
+        borderFrameMesh.material.needsUpdate = true;
+        lastBorderAspect = LAYOUT.aspect;
       }
+
+      // Envelope: portrait envelope on tall screens, landscape envelope on wide ones
+      if (!envelopeGroup || envMode !== LAYOUT.mode || Math.abs(ENV.aspect - LAYOUT.aspect) > 0.001) {
+        buildRoyalEnvelope(LAYOUT.mode);
+      }
+      const f1 = getFrustumSizeAtZ(1.45);
+      const baseY = -0.11 * f1.height;
+      const s = Math.min(
+        (0.84 * f1.width) / ENV.w,
+        (0.47 * f1.height - baseY) / ENV.topExtent,
+        (0.76 * f1.height) / ENV.h
+      );
+      envelopeGroup.userData.baseScale = s;
+      envelopeGroup.userData.baseY = baseY;
     }
 
     function paintLetterCanvas() {
       // The letter is the exact invitation: same art, text and border as the final card
-      const W = 1024, H = Math.round(W / ART.aspect);
+      const W = LAYOUT.mode === 'portrait' ? 1024 : 1280, H = Math.round(W / LAYOUT.aspect);
       const c = createHiResCanvas(W, H);
       const ctx = c.getContext('2d');
       ctx.drawImage(ART_IMG.plate, 0, 0, W, H);
       const put = (im, r) => ctx.drawImage(im, r.x0 * W, r.y0 * H, (r.x1 - r.x0) * W, (r.y1 - r.y0) * H);
-      put(ART_IMG.lotusTL, ART.lotusTL);
-      put(ART_IMG.lotusBR, ART.lotusBR);
-      if (lastCoupleCanvas) put(lastCoupleCanvas, ART.couple);
+      put(ART_IMG.lotusTL, LAYOUT.tl);
+      put(ART_IMG.lotusBR, LAYOUT.br);
+      if (lastCoupleCanvas) put(lastCoupleCanvas, LAYOUT.couple);
       if (lastTextCanvas) ctx.drawImage(lastTextCanvas, 0, 0, W, H);
-      ctx.drawImage(paintGoldBorderCanvas(ART.aspect), 0, 0, W, H);
+      ctx.drawImage(paintGoldBorderCanvas(LAYOUT.aspect), 0, 0, W, H);
       return c;
     }
 
@@ -849,117 +946,153 @@
       letterMesh.material.needsUpdate = true;
     }
 
-    function buildRoyalEnvelope() {
+    function disposeObject(o) {
+      o.traverse(c => {
+        if (c.geometry) c.geometry.dispose();
+        if (c.material) {
+          (Array.isArray(c.material) ? c.material : [c.material]).forEach(m => { if (m.map) m.map.dispose(); m.dispose(); });
+        }
+      });
+    }
+
+    /**
+     * Red envelope following the reference design: a pocket with a V-shaped top and two lighter
+     * side folds, a triangular flap hinged on the top edge that flips back behind the letter,
+     * and a letter that slides up out of the pocket. Portrait on tall screens, landscape on wide ones.
+     */
+    function buildRoyalEnvelope(mode) {
+      if (envelopeGroup) { scene.remove(envelopeGroup); disposeObject(envelopeGroup); }
+      if (letterMesh && letterMesh.parent === scene) { scene.remove(letterMesh); disposeObject(letterMesh); }
+      sealBurstVelocities.length = 0;
+      envMode = mode;
+
+      const portrait = mode === 'portrait';
+      const EW = portrait ? 2.3 : 3.4, EH = portrait ? 3.0 : 2.2;
+      const hw = EW / 2, top = EH / 2, bot = -EH / 2;
+      const notch = EH * (portrait ? 0.40 : 0.42);       // depth of the V on the pocket
+      const flapDepth = notch + EH * 0.05;               // flap tip reaches just past the V, like the reference
+      const a = LAYOUT.aspect;
+      const letterH = Math.min(EH * 0.9, (EW * 0.86) / a), letterW = letterH * a;
+      const letterY0 = bot + 0.05 + letterH / 2;         // resting inside the pocket
+      const riseY = (top - notch) + letterH / 2 - 0.03;  // risen, bottom edge still behind the pocket V
+      const sealSize = EW * 0.2, sealY = top - flapDepth * 0.8;
+      Object.assign(ENV, {
+        aspect: a, w: EW, h: EH, letterW, letterH, letterY0, riseY, sealY,
+        topExtent: Math.max(riseY + letterH / 2, top + flapDepth)
+      });
+
       envelopeGroup = new THREE.Group();
-      envelopeGroup.position.set(0, 0.12, 1.45);
+      envelopeGroup.position.set(0, 0, 1.45);
       scene.add(envelopeGroup);
 
-      const envW = 3.4, envH = 2.35;
-
-      const envPaperTex = new THREE.CanvasTexture(paintLoktaBackgroundCanvas(1024));
-      envPaperTex.encoding = THREE.sRGBEncoding;
-
-      const paperProps = {
-        map: envPaperTex, roughness: 0.78, metalness: 0.12,
-        emissive: 0x5a0a14, emissiveIntensity: 0.55, envMapIntensity: 0.3
+      const mat = (color, side = THREE.FrontSide) => new THREE.MeshStandardMaterial({
+        color, roughness: 0.62, metalness: 0.06, emissive: color, emissiveIntensity: 0.32, envMapIntensity: 0.3, side
+      });
+      const gradTex = (w, h, draw) => {
+        const c = createHiResCanvas(w, h);
+        draw(c.getContext('2d'), w, h);
+        return new THREE.CanvasTexture(c);
       };
-      const maroonPaperMat = new THREE.MeshStandardMaterial({ ...paperProps, side: THREE.DoubleSide });
-      const flapFrontMat = new THREE.MeshStandardMaterial({ ...paperProps, side: THREE.FrontSide });
+      const shape = pts => { const sh = new THREE.Shape(); pts.forEach(([x, y], i) => i ? sh.lineTo(x, y) : sh.moveTo(x, y)); sh.closePath(); return sh; };
+      const gold = () => new THREE.LineBasicMaterial({ color: 0xf5d061 });
 
-      const goldBase = {
-        color: 0xf5d061, emissive: 0x3b2604, emissiveIntensity: 0.35,
-        metalness: 0.88, roughness: 0.24, envMapIntensity: 1.2
-      };
-      const goldFoilLiningMat = new THREE.MeshStandardMaterial({ ...goldBase, side: THREE.DoubleSide });
-      const flapBackMat = new THREE.MeshStandardMaterial({ ...goldBase, side: THREE.BackSide });
+      // soft ground shadow
+      const ground = new THREE.Mesh(
+        new THREE.PlaneGeometry(EW * 1.55, EH * 1.45),
+        new THREE.MeshBasicMaterial({
+          map: gradTex(128, 128, (ctx, w, h) => {
+            const g = ctx.createRadialGradient(w / 2, h / 2, 4, w / 2, h / 2, w / 2);
+            g.addColorStop(0, 'rgba(10,0,2,0.7)'); g.addColorStop(1, 'rgba(10,0,2,0)');
+            ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+          }),
+          transparent: true, depthWrite: false, opacity: 0.55
+        })
+      );
+      ground.position.z = -0.08;
+      envelopeGroup.add(ground);
 
-      const backMesh = new THREE.Mesh(new THREE.PlaneGeometry(envW, envH), maroonPaperMat);
-      backMesh.position.z = -0.03;
-      envelopeGroup.add(backMesh);
+      // back panel
+      const back = new THREE.Mesh(new THREE.PlaneGeometry(EW, EH), mat(0x6b0613));
+      back.position.z = -0.03;
+      envelopeGroup.add(back);
 
-      const innerGoldMesh = new THREE.Mesh(new THREE.PlaneGeometry(envW - 0.08, envH - 0.08), goldFoilLiningMat);
-      innerGoldMesh.position.z = -0.022;
-      envelopeGroup.add(innerGoldMesh);
+      // pocket: base + two lighter side folds (left/right triangles of the reference)
+      const pocket = new THREE.Mesh(
+        new THREE.ShapeGeometry(shape([[-hw, bot], [hw, bot], [hw, top], [0, top - notch], [-hw, top]])), mat(0xa30f22));
+      pocket.position.z = 0.035;
+      envelopeGroup.add(pocket);
+      const sideMat = mat(0xb9172b);
+      const left = new THREE.Mesh(new THREE.ShapeGeometry(shape([[0, top - notch], [-hw, top], [-hw, bot]])), sideMat);
+      const right = new THREE.Mesh(new THREE.ShapeGeometry(shape([[0, top - notch], [hw, bot], [hw, top]])), sideMat);
+      left.position.z = right.position.z = 0.037;
+      envelopeGroup.add(left, right);
 
-      const pocketShape = new THREE.Shape();
-      pocketShape.moveTo(-envW * 0.5, -envH * 0.5);
-      pocketShape.lineTo(envW * 0.5, -envH * 0.5);
-      pocketShape.lineTo(envW * 0.5, envH * 0.48);
-      pocketShape.lineTo(0, -0.06);
-      pocketShape.lineTo(-envW * 0.5, envH * 0.48);
-      pocketShape.closePath();
-      const pocketMesh = new THREE.Mesh(new THREE.ShapeGeometry(pocketShape), maroonPaperMat);
-      pocketMesh.position.z = 0.035;
-      envelopeGroup.add(pocketMesh);
-
-      const trimPoints = [
-        new THREE.Vector3(-envW * 0.5, envH * 0.48, 0.04),
-        new THREE.Vector3(0, -0.06, 0.04),
-        new THREE.Vector3(envW * 0.5, envH * 0.48, 0.04),
-        new THREE.Vector3(envW * 0.5, -envH * 0.5, 0.04),
-        new THREE.Vector3(-envW * 0.5, -envH * 0.5, 0.04),
-        new THREE.Vector3(-envW * 0.5, envH * 0.48, 0.04)
-      ];
       envelopeGroup.add(new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints(trimPoints),
-        new THREE.LineBasicMaterial({ color: 0xf5d061 })
-      ));
+        new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-hw, top, 0.04), new THREE.Vector3(0, top - notch, 0.04), new THREE.Vector3(hw, top, 0.04)]),
+        gold()));
 
-      // Hinged top flap
-      envFlapPivot = new THREE.Group();
-      envFlapPivot.position.set(0, envH * 0.5, 0.042);
-      envelopeGroup.add(envFlapPivot);
+      // contact shadow cast by the pocket edge onto the letter and back panel
+      const sh = EH * 0.07;
+      const bandGeo = new THREE.BufferGeometry();
+      const q = (x0, y0, x1, y1) => [x0, y0, 0.02, x1, y1, 0.02, x1, y1 + sh, 0.02, x0, y0 + sh, 0.02];
+      bandGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([...q(-hw, top, 0, top - notch), ...q(0, top - notch, hw, top)]), 3));
+      bandGeo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array([0.5, 0, 0.5, 0, 0.5, 1, 0.5, 1, 0.5, 0, 0.5, 0, 0.5, 1, 0.5, 1]), 2));
+      bandGeo.setIndex([0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7]);
+      const band = new THREE.Mesh(bandGeo, new THREE.MeshBasicMaterial({
+        map: gradTex(4, 64, (ctx, w, h) => {
+          const g = ctx.createLinearGradient(0, h, 0, 0);
+          g.addColorStop(0, 'rgba(20,0,4,0.55)'); g.addColorStop(1, 'rgba(20,0,4,0)');
+          ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+        }),
+        transparent: true, depthWrite: false
+      }));
+      band.renderOrder = 41;
+      envelopeGroup.add(band);
 
-      const flapShape = new THREE.Shape();
-      flapShape.moveTo(-envW * 0.5, 0);
-      flapShape.lineTo(envW * 0.5, 0);
-      flapShape.quadraticCurveTo(envW * 0.34, -envH * 0.34, 0, -envH * 0.58);
-      flapShape.quadraticCurveTo(-envW * 0.34, -envH * 0.34, -envW * 0.5, 0);
-      flapShape.closePath();
-      const flapGeo = new THREE.ShapeGeometry(flapShape);
-
-      envFlapPivot.add(new THREE.Mesh(flapGeo, flapFrontMat));   // maroon outside
-      envFlapPivot.add(new THREE.Mesh(flapGeo, flapBackMat));    // gold inside, shown once flipped open
-
-      const flapCurvePts = flapShape.getPoints(48).map(p => new THREE.Vector3(p.x, p.y, 0.008));
-      envFlapPivot.add(new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints(flapCurvePts),
-        new THREE.LineBasicMaterial({ color: 0xf5d061 })
-      ));
-
-      // The letter: waits inside the pocket, slides out, then flies forward to fill the screen
+      // the letter (exact invitation)
       letterMesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(LETTER_W, LETTER_H),
+        new THREE.PlaneGeometry(letterW, letterH),
         new THREE.MeshBasicMaterial({ transparent: true, toneMapped: false, depthWrite: false })
       );
       letterMesh.renderOrder = 40;
-      letterMesh.position.set(0, -0.1, 0);
+      letterMesh.position.set(0, letterY0, 0);
       envelopeGroup.add(letterMesh);
       refreshLetterTexture();
 
-      // Wax seal
+      // flap: triangle hinged on the top edge
+      envFlapPivot = new THREE.Group();
+      envFlapPivot.position.set(0, top, 0.042);
+      envelopeGroup.add(envFlapPivot);
+      const flapGeo = new THREE.ShapeGeometry(shape([[-hw, 0], [hw, 0], [0, -flapDepth]]));
+      envFlapPivot.add(new THREE.Mesh(flapGeo, mat(0xb3142a, THREE.FrontSide)));
+      envFlapPivot.add(new THREE.Mesh(flapGeo, mat(0x7d0a18, THREE.BackSide)));
+      envFlapPivot.add(new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-hw, 0, 0.006), new THREE.Vector3(0, -flapDepth, 0.006), new THREE.Vector3(hw, 0, 0.006)]),
+        gold()));
+
+      // gold wax seal at the flap tip
       const { colorCanvas: sealColor, bumpCanvas: sealBump } = paintWaxSealCanvases();
       const sealTex = new THREE.CanvasTexture(sealColor);
       sealTex.encoding = THREE.sRGBEncoding;
       waxSealMesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(0.84, 0.84),
+        new THREE.PlaneGeometry(sealSize, sealSize),
         new THREE.MeshStandardMaterial({
           map: sealTex, bumpMap: new THREE.CanvasTexture(sealBump), bumpScale: 0.035,
           metalness: 0.88, roughness: 0.22, transparent: true, opacity: 1
         })
       );
-      waxSealMesh.position.set(0, -0.14, 0.068);
+      waxSealMesh.position.set(0, sealY, 0.068);
       waxSealMesh.renderOrder = 30;
       envelopeGroup.add(waxSealMesh);
 
-      // Sparkle burst
+      // sparkle burst
       const burstCount = 70;
       const burstPositions = new Float32Array(burstCount * 3);
       for (let i = 0; i < burstCount; i++) {
-        burstPositions[i * 3 + 1] = -0.14;
+        burstPositions[i * 3 + 1] = sealY;
         burstPositions[i * 3 + 2] = 0.1;
         const angle = Math.random() * Math.PI * 2;
-        const speed = 0.6 + Math.random() * 2.2;
+        const speed = (0.6 + Math.random() * 2.2) * (EW / 3.4);
         sealBurstVelocities.push({ vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed + 0.4, vz: 0.5 + Math.random() * 1.8 });
       }
       const burstGeo = new THREE.BufferGeometry();
@@ -971,8 +1104,6 @@
       sealBurstParticles.renderOrder = 35;
       sealBurstParticles.frustumCulled = false;
       envelopeGroup.add(sealBurstParticles);
-
-      layoutResponsivePlanes();
     }
 
     function buildFloatingDustParticles() {
@@ -1029,8 +1160,8 @@
         case 270: tx =  dG; ty = -dB; break;
         default:  tx =  dB; ty =  dG;
       }
-      state.gyroTiltX = THREE.MathUtils.degToRad(tx * 0.55);
-      state.gyroTiltY = THREE.MathUtils.degToRad(ty * 0.72);
+      state.gyroTiltX = THREE.MathUtils.degToRad(tx * 0.28);
+      state.gyroTiltY = THREE.MathUtils.degToRad(ty * 0.36);
     }
 
     function disableGyroscope(auto = false) {
@@ -1176,30 +1307,7 @@
         cardData.date = document.getElementById('input-date').value;
         cardData.venue = document.getElementById('input-venue').value;
         cardData.host = document.getElementById('input-host').value;
-
-        const aniso = renderer.capabilities.getMaxAnisotropy();
-        const { colorCanvas, foilCanvas } = paintGoldTypographyCanvases();
-
-        const newTextTex = new THREE.CanvasTexture(colorCanvas);
-        newTextTex.encoding = THREE.sRGBEncoding;
-        newTextTex.anisotropy = aniso;
-        const newFoilTex = new THREE.CanvasTexture(foilCanvas);
-        newFoilTex.anisotropy = aniso;
-        const newShadowTex = new THREE.CanvasTexture(generatePaperCutShadowCanvas(foilCanvas, 18));
-
-        if (typographyMat.map) typographyMat.map.dispose();
-        if (typographyMat.metalnessMap) typographyMat.metalnessMap.dispose();
-        if (plane3Shadow.material.map) plane3Shadow.material.map.dispose();
-
-        typographyMat.map = newTextTex;
-        typographyMat.metalnessMap = newFoilTex;
-        typographyMat.roughnessMap = newFoilTex;
-        typographyMat.bumpMap = newFoilTex;
-        typographyMat.needsUpdate = true;
-
-        plane3Shadow.material.map = newShadowTex;
-        plane3Shadow.material.needsUpdate = true;
-        refreshLetterTexture();
+        applyTypographyTextures();
       };
 
       const updateCoupleTexture = (imgObj) => {
@@ -1288,19 +1396,20 @@
     // =========================================================
     const clock = new THREE.Clock();
 
-    function easeInOutCubic(x) {
-      return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+    function easeInOutCubic(x) {            // smootherstep: zero velocity AND acceleration at both ends
+      return x * x * x * (x * (x * 6 - 15) + 10);
     }
 
     function animate() {
       requestAnimationFrame(animate);
 
       const rawDt = clock.getDelta();
-      const dt = Math.min(rawDt, 0.12);
+      state.smoothDt += (Math.min(rawDt, 0.12) - state.smoothDt) * 0.25;   // de-jitter frame times
+      const dt = state.smoothDt;
       const elapsed = clock.getElapsedTime();
 
       if (state.envelopeMode === 'opening') {
-        state.openProgress = Math.min(1, state.openProgress + dt * 0.32);
+        state.openProgress = Math.min(1, state.openProgress + dt * 0.23);
         if (state.openProgress >= 1) state.envelopeMode = 'opened';
       } else if (state.envelopeMode === 'closing') {
         state.openProgress = Math.max(0, state.openProgress - dt * 0.55);
@@ -1312,12 +1421,20 @@
         }
       }
 
-      const p = state.openProgress;
+      const target = state.openProgress;
+      state.shownProgress += (target - state.shownProgress) * (1 - Math.exp(-dt * 9));   // eases the start and end of the whole sequence
+      if (Math.abs(target - state.shownProgress) < 0.0004) state.shownProgress = target;
+      const p = state.shownProgress;
 
       // Slow-open watchdog: if opening drags (low FPS or too long), drop the gyro to save work
       if (state.envelopeMode === 'opening') {
         state.slowAccum = rawDt > 0.05 ? state.slowAccum + rawDt : Math.max(0, state.slowAccum - rawDt);
         const waited = performance.now() - state.openStartedAt;
+        if (state.slowAccum > 0.4 && !state.dprDropped && renderer.getPixelRatio() > 1) {   // keep it smooth on slow GPUs
+          state.dprDropped = true;
+          renderer.setPixelRatio(1);
+          renderer.setSize(window.innerWidth, window.innerHeight);
+        }
         if (gyro.listening && (state.slowAccum > 1.0 || waited > 5000)) {
           disableGyroscope(true);
           showToast('Opening is slow, gyro turned off. Tap Gyro to turn it back on.');
@@ -1327,12 +1444,13 @@
       // Input: gyro wins over mouse when active
       const mx = state.gyroActive ? 0 : state.mouseNormX;
       const my = state.gyroActive ? 0 : state.mouseNormY;
-      const targetX = my * 0.22 + state.gyroTiltX;
-      const targetY = mx * 0.28 + state.gyroTiltY;
-      state.smoothTiltX += (targetX - state.smoothTiltX) * 0.09;
-      state.smoothTiltY += (targetY - state.smoothTiltY) * 0.09;
-      const tiltX = THREE.MathUtils.clamp(state.smoothTiltX, -0.45, 0.45);
-      const tiltY = THREE.MathUtils.clamp(state.smoothTiltY, -0.52, 0.52);
+      const tiltK = 1 - Math.exp(-dt * 5);                  // frame-rate independent smoothing
+      const targetX = my * 0.09 + state.gyroTiltX;
+      const targetY = mx * 0.11 + state.gyroTiltY;
+      state.smoothTiltX += (targetX - state.smoothTiltX) * tiltK;
+      state.smoothTiltY += (targetY - state.smoothTiltY) * tiltK;
+      const tiltX = THREE.MathUtils.clamp(state.smoothTiltX, -0.22, 0.22);
+      const tiltY = THREE.MathUtils.clamp(state.smoothTiltY, -0.26, 0.26);
 
       // ----- Envelope + letter -----
       if (envelopeGroup) {
@@ -1344,25 +1462,26 @@
           const clamp01 = x => THREE.MathUtils.clamp(x, 0, 1);
           const lerp = THREE.MathUtils.lerp;
           const baseScale = envelopeGroup.userData.baseScale || 1;
-          const calm = 1 - clamp01(p / 0.5);              // float + tilt fade out before the letter leaves
-          const idleFloat = Math.sin(elapsed * 1.8) * 0.045 * calm;
+          const baseY = envelopeGroup.userData.baseY || 0;
+          const calm = 1 - clamp01(p / 0.45);                 // idle motion + tilt fade out before the letter leaves
+          const idleFloat = Math.sin(elapsed * 1.6) * 0.04 * calm * baseScale;
 
-          // A (0 - .25): gold seal lifts and dissolves into sparkles
-          const sealT = clamp01(p / 0.25);
+          // A (0 - .20): gold seal lifts and dissolves into sparkles
+          const sealT = clamp01(p / 0.22);
           waxSealMesh.visible = sealT < 0.99;
-          waxSealMesh.position.z = 0.068 + sealT * 0.35;
+          waxSealMesh.position.z = 0.068 + sealT * 0.3;
           const sealScale = 1 + Math.sin(sealT * Math.PI * 0.75) * 0.26;
           waxSealMesh.scale.set(sealScale, sealScale, 1);
           waxSealMesh.material.opacity = 1 - easeInOutCubic(sealT);
 
-          if (p > 0.04 && p < 0.55) {
-            const burstT = clamp01((p - 0.04) / 0.45);
+          if (p > 0.03 && p < 0.5) {
+            const burstT = clamp01((p - 0.03) / 0.42);
             sealBurstParticles.material.opacity = Math.sin(burstT * Math.PI) * 0.95;
             const posAttr = sealBurstParticles.geometry.attributes.position;
             for (let i = 0; i < sealBurstVelocities.length; i++) {
               const v = sealBurstVelocities[i];
               posAttr.array[i * 3] = v.vx * burstT * 1.4;
-              posAttr.array[i * 3 + 1] = -0.14 + v.vy * burstT * 1.4;
+              posAttr.array[i * 3 + 1] = ENV.sealY + v.vy * burstT * 1.4;
               posAttr.array[i * 3 + 2] = 0.1 + v.vz * burstT * 1.2;
             }
             posAttr.needsUpdate = true;
@@ -1370,33 +1489,34 @@
             sealBurstParticles.material.opacity = 0;
           }
 
-          // B (.12 - .40): flap flips a full 180 degrees and settles flat behind the letter
-          const flapT = easeInOutCubic(clamp01((p - 0.12) / 0.28));
+          // B (.10 - .38): flap flips 180 degrees and settles flat behind the letter
+          const flapT = easeInOutCubic(clamp01((p - 0.08) / 0.32));
           envFlapPivot.rotation.x = -flapT * Math.PI;
           envFlapPivot.position.z = 0.042 - clamp01((flapT - 0.5) / 0.5) * 0.057;
 
-          // C (.34 - .62): letter slides up out of the pocket
-          const riseT = easeInOutCubic(clamp01((p - 0.34) / 0.28));
+          // C (.30 - .58): letter slides up out of the pocket
+          const riseT = easeInOutCubic(clamp01((p - 0.26) / 0.34));
+          // D (.56 - .86): letter flies forward and lands exactly on the card; envelope drops away
+          const flyT = easeInOutCubic(clamp01((p - 0.58) / 0.32));
+          const exitT = easeInOutCubic(clamp01((p - 0.58) / 0.40));
 
-          // D (.62 - .90): letter flies forward and grows to fill the screen; envelope drops away
-          const flyT = easeInOutCubic(clamp01((p - 0.62) / 0.28));
-          const exitT = easeInOutCubic(clamp01((p - 0.66) / 0.32));
-
-          envelopeGroup.position.y = 0.12 + idleFloat - exitT * 6.5;
+          envelopeGroup.position.y = baseY + idleFloat - exitT * 7;
           envelopeGroup.position.z = 1.45 - exitT * 0.8;
-          envelopeGroup.rotation.x = tiltX * 0.75 * calm + exitT * 0.35;
-          envelopeGroup.rotation.y = tiltY * 0.85 * calm;
-          envelopeGroup.scale.setScalar(baseScale * (1 - exitT * 0.15));
+          envelopeGroup.rotation.x = tiltX * 0.3 * calm + exitT * 0.3;
+          envelopeGroup.rotation.y = tiltY * 0.35 * calm;
+          envelopeGroup.rotation.z = Math.sin(elapsed * 0.9) * 0.012 * calm;
+          envelopeGroup.scale.setScalar(baseScale * (1 - exitT * 0.12));
 
           if (flyT <= 0) {
             if (letterMesh.parent !== envelopeGroup) envelopeGroup.add(letterMesh);   // behind the pocket
-            letterMesh.position.set(0, lerp(-0.1, RISE_Y, riseT), 0);
+            letterMesh.position.set(0, lerp(ENV.letterY0, ENV.riseY, riseT), 0);
             letterMesh.rotation.set(0, 0, 0);
             letterMesh.scale.set(1, 1, 1);
           } else {
             if (letterMesh.parent !== scene) scene.add(letterMesh);                   // in front of everything
-            const endScale = CARD.h / LETTER_H;                                       // lands exactly on the card
-            letterMesh.position.set(0, lerp(0.12 + RISE_Y * baseScale, 0, flyT), lerp(1.5, 0, flyT));
+            const endScale = CARD.h / ENV.letterH;
+            const ry = lerp(ENV.letterY0, ENV.riseY, riseT);
+            letterMesh.position.set(0, lerp(baseY + ry * baseScale, 0, flyT), lerp(1.5, 0, flyT));
             letterMesh.rotation.set(0, 0, 0);
             letterMesh.scale.setScalar(lerp(baseScale, endScale, flyT));
           }
@@ -1408,11 +1528,11 @@
       if (shadowBoxGroup) {
         const clamp01 = x => THREE.MathUtils.clamp(x, 0, 1);
         const lerp = THREE.MathUtils.lerp;
-        const depth = easeInOutCubic(clamp01((p - 0.86) / 0.14));
-        const fade = clamp01((p - 0.7) / 0.2);
+        const depth = easeInOutCubic(clamp01((p - 0.84) / 0.16));
+        const fade = clamp01((p - 0.64) / 0.26);
         shadowBoxGroup.visible = fade > 0.001;
-        shadowBoxGroup.rotation.x = tiltX * 0.38 * depth;
-        shadowBoxGroup.rotation.y = tiltY * 0.46 * depth;
+        shadowBoxGroup.rotation.x = tiltX * 0.2 * depth;
+        shadowBoxGroup.rotation.y = tiltY * 0.24 * depth;
 
         const px = tiltY, py = -tiltX;
         const camZ = camera.position.z;
@@ -1441,8 +1561,8 @@
       }
 
       if (keyLight) {
-        keyLight.position.x += (1.4 + tiltY * 6.5 - keyLight.position.x) * 0.1;
-        keyLight.position.y += (1.8 - tiltX * 5.2 - keyLight.position.y) * 0.1;
+        keyLight.position.x += (1.4 + tiltY * 4 - keyLight.position.x) * 0.1;
+        keyLight.position.y += (1.8 - tiltX * 3 - keyLight.position.y) * 0.1;
       }
 
       if (dustParticles) {
